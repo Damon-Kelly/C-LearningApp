@@ -1,0 +1,200 @@
+# Pointers and arrays: pointer arithmetic, arrays as parameters.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Pointers and arrays
+@summary Pointer arithmetic and how arrays decay to pointers
+
+#---------------------------------------------------------------------------
+@page explain An array name is an address
+@text
+In most expressions the name of an array turns into the address of its first element. So you can store it straight into a pointer, and the pointer can then reach every element.
+@end
+@code c
+int a[4] = {10, 20, 30, 40};
+int *p = a;
+printf("%d %d\n", a[0], *p);
+printf("%d\n", *(p + 2));
+@output
+10 10
+30
+@end
+@text
+Adding to a pointer moves it by whole elements, not bytes. p + 2 is the address two ints further on, and *(p + 2) is the value there. The square brackets are shorthand: a[i] means exactly *(a + i).
+@end
+@text
+You can also change the pointer itself with p++ to walk along an array one element at a time.
+@end
+@code c
+int a[5] = {2, 4, 6, 8, 10};
+int *p = a;
+int sum = 0;
+for (int i = 0; i < 5; i++) {
+    sum += *p;
+    p++;
+}
+printf("%d\n", sum);
+@output
+30
+@end
+@text
+Strings are just char arrays that end with '\0', so the same walk works: stop when you reach the terminator.
+@end
+@code c
+char s[] = "cat";
+char *p = s;
+while (*p != '\0') {
+    printf("%c\n", *p);
+    p++;
+}
+@output
+c
+a
+t
+@end
+
+#---------------------------------------------------------------------------
+@page explain Arrays as parameters
+@text
+When you pass an array to a function, only the address of the first element is copied. The parameter int arr[] is really int *arr. Two things follow from that.
+@end
+@text
+- The function does not know the length, so you pass it separately.
+- The function works on the caller's real array, so writes through arr are visible outside.
+@end
+@code c
+int total(int *arr, int n) {
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        sum += arr[i];
+    }
+    return sum;
+}
+
+void doubleAll(int *arr, int n) {
+    for (int i = 0; i < n; i++) {
+        arr[i] = arr[i] * 2;
+    }
+}
+
+int main(void) {
+    int a[3] = {1, 2, 3};
+    printf("%d\n", total(a, 3));
+    doubleAll(a, 3);
+    printf("%d %d %d\n", a[0], a[1], a[2]);
+    return 0;
+}
+@output
+6
+2 4 6
+@end
+@text
+C does not check bounds. Reading or writing past the end of an array (like a[3] on a 3-element array) is undefined behaviour: it may crash, or silently corrupt other data.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Walking along an array
+@code c
+int a[3] = {5, 6, 7};
+int *p = a;
+p = p + 1;
+*p = 60;
+p++;
+*p = 70;
+@end
+@step 1
+@cell a[0] int 5 1000
+@cell a[1] int 6 1004
+@cell a[2] int 7 1008
+@note The three elements sit next to each other, 4 bytes apart.
+@step 2
+@cell a[0] int 5 1000
+@cell a[1] int 6 1004
+@cell a[2] int 7 1008
+@cell p int* ->a[0] 1012
+@note a becomes the address of a[0], so p points at the first element.
+@step 3
+@cell a[0] int 5 1000
+@cell a[1] int 6 1004
+@cell a[2] int 7 1008
+@cell p int* ->a[1] 1012
+@note p + 1 is one element further on, so p now points at a[1].
+@step 4
+@cell a[0] int 5 1000
+@cell a[1] int 60 1004
+@cell a[2] int 7 1008
+@cell p int* ->a[1] 1012
+@note *p = 60 writes into the element p points at, a[1].
+@step 5
+@cell a[0] int 5 1000
+@cell a[1] int 60 1004
+@cell a[2] int 7 1008
+@cell p int* ->a[2] 1012
+@note p++ moves the pointer on by one element again.
+@step 6
+@cell a[0] int 5 1000
+@cell a[1] int 60 1004
+@cell a[2] int 70 1008
+@cell p int* ->a[2] 1012
+@note *p = 70 writes into a[2]. a[0] was never touched.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int a[4] = {1, 2, 3, 4};
+int *p = a + 1;
+p[1] = 9;
+printf("%d %d\n", *p, a[2]);
+@output
+2 9
+@end
+@option 2 9
+@option 9 9
+@option 1 9
+@option 2 3
+@answer 1
+@why p points at a[1], so *p is 2. p[1] means *(p + 1), which is a[2], so that is the element set to 9.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q With int a[5]; what does a[2] mean?
+@opt *(a + 2)
+@opt *a + 2
+@opt &a + 2
+@opt a + 2
+@correct 1
+@why Indexing is shorthand for adding to the address and following it: a[i] is *(a + i).
+
+@q p is an int * pointing at a[0]. Where does p + 1 point?
+@opt One byte after a[0]
+@opt At a[1]
+@opt At the end of the array
+@opt Nowhere, p + 1 is a compile error
+@correct 2
+@why Pointer arithmetic moves by whole elements of the pointed-at type.
+
+@q A function is declared void show(int arr[], int n). What does arr really hold?
+@opt A full copy of the array
+@opt The length of the array
+@opt The address of the first element
+@opt Nothing until the function fills it
+@correct 3
+@why Arrays are passed as a pointer to their first element, which is why the length is passed separately.
+
+@q After  int a[3] = {1, 2, 3}; int *p = a; p++;  what is *p?
+@opt 1
+@opt 2
+@opt 3
+@opt The address of a[1]
+@correct 2
+@why p++ moves p to a[1], and *p is the value there.
+
+@q What happens if you write a[5] = 1 on an array declared int a[5]?
+@opt The array grows by one element
+@opt The compiler always stops you
+@opt Undefined behaviour: it writes outside the array
+@opt It is the same as a[0]
+@correct 3
+@why Valid indexes are 0 to 4. C does not check bounds, so the write lands in memory that is not yours.

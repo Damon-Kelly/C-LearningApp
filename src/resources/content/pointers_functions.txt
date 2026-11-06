@@ -1,0 +1,201 @@
+# Pointers and functions: pass by value vs pass by pointer.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Pointers and functions
+@summary How a function can change its caller's variables
+
+#---------------------------------------------------------------------------
+@page explain Functions work on copies
+@text
+When you call a function in C, every argument is copied into the matching parameter. The function works on its own copy, so changing the parameter cannot change the variable you passed in.
+@end
+@code c
+void addOne(int n) {
+    n = n + 1;
+}
+
+int main(void) {
+    int x = 5;
+    addOne(x);
+    printf("%d\n", x);
+    return 0;
+}
+@output
+5
+@end
+@text
+To let a function change the caller's variable, pass its address. The parameter is then a pointer, and the function writes through it with *.
+@end
+@code c
+void addOne(int *n) {
+    *n = *n + 1;
+}
+
+int main(void) {
+    int x = 5;
+    addOne(&x);
+    printf("%d\n", x);
+    return 0;
+}
+@output
+6
+@end
+@text
+The pointer itself is still just a copy, but it holds the address of x, so *n reaches the real x. This is called passing by pointer.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Returning more than one result
+@text
+A function can only return one value. Pointer parameters give it extra ways to hand results back: the caller passes the addresses of variables to fill in.
+@end
+@code c
+void divide(int a, int b, int *quot, int *rem) {
+    *quot = a / b;
+    *rem = a % b;
+}
+
+int main(void) {
+    int q, r;
+    divide(17, 5, &q, &r);
+    printf("%d r %d\n", q, r);
+    return 0;
+}
+@output
+3 r 2
+@end
+@text
+You have already used this idea: scanf("%d", &x) needs &x because scanf has to write into your variable.
+@end
+@text
+Passing a pointer is also cheaper for big data, because only an address is copied instead of the whole thing. If the function should not change it, say so with const.
+@end
+@code c
+int firstOf(const int *p) {
+    return *p;
+}
+
+int main(void) {
+    int v = 8;
+    printf("%d\n", firstOf(&v));
+    return 0;
+}
+@output
+8
+@end
+
+#---------------------------------------------------------------------------
+@page trace Inside a swap
+@code c
+int x = 1;
+int y = 2;
+int *a = &x;
+int *b = &y;
+int t = *a;
+*a = *b;
+*b = t;
+@end
+@step 1
+@cell x int 1 1000
+@note x is created and holds 1.
+@step 2
+@cell x int 1 1000
+@cell y int 2 1004
+@note y is created and holds 2.
+@step 3
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int* ->x 1008
+@note a points at x. In a real swap(&x, &y) call, this is what the parameter a would hold.
+@step 4
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int* ->x 1008
+@cell b int* ->y 1016
+@note b points at y, just like the second parameter of swap.
+@step 5
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int* ->x 1008
+@cell b int* ->y 1016
+@cell t int 1 1024
+@note t = *a copies the value of x (1) into a temporary. x is not changed yet.
+@step 6
+@cell x int 2 1000
+@cell y int 2 1004
+@cell a int* ->x 1008
+@cell b int* ->y 1016
+@cell t int 1 1024
+@note *a = *b writes y's value into x. The old value of x survives only in t.
+@step 7
+@cell x int 2 1000
+@cell y int 1 1004
+@cell a int* ->x 1008
+@cell b int* ->y 1016
+@cell t int 1 1024
+@note *b = t writes the saved value into y. The two variables are swapped; a and b never changed.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+void f(int *p, int v) { *p = *p + v; v = 100; }
+
+int main(void) {
+    int a = 1, b = 2;
+    f(&a, b);
+    printf("%d %d\n", a, b);
+}
+@output
+3 2
+@end
+@option 3 2
+@option 3 100
+@option 1 2
+@option 101 2
+@answer 1
+@why p holds the address of a, so *p = *p + v makes a = 1 + 2 = 3. v is only a copy of b, so v = 100 changes nothing outside f and b stays 2.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Why does void addOne(int n) { n = n + 1; } not change the caller's variable?
+@opt n is a copy of the argument
+@opt n is a constant
+@opt Functions cannot do arithmetic
+@opt The compiler removes the line
+@correct 1
+@why Arguments are copied into parameters. Changing the copy leaves the original alone.
+
+@q A function is declared void set(int *p). How do you call it so that x is changed?
+@opt set(x);
+@opt set(*x);
+@opt set(&x);
+@opt set(&&x);
+@correct 3
+@why The function needs the address of x, and & gives it.
+
+@q Inside void set(int *p), which line stores 7 in the caller's variable?
+@opt p = 7;
+@opt *p = 7;
+@opt p = &7;
+@opt &p = 7;
+@correct 2
+@why *p is the caller's variable, so *p = 7 writes there. p = 7 would only change the local pointer.
+
+@q Inside void f(int *p), what does the statement p = NULL; do to the caller's pointer?
+@opt Sets it to NULL as well
+@opt Frees the memory it points at
+@opt Nothing, it only changes f's own copy of p
+@opt It will not compile
+@correct 3
+@why The pointer is passed by value too. Assigning to p changes the copy, not the caller's pointer.
+
+@q Why does scanf("%d", &x) need the &?
+@opt To make the number positive
+@opt scanf must be given the address so it can write into x
+@opt To convert the input to text
+@opt It does not, & is optional
+@correct 2
+@why scanf is a function, so without the address it could only change a copy.

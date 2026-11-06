@@ -25,6 +25,10 @@
 #define MAX_CELLS                8
 #define MAX_QUESTIONS            10
 #define MAX_OPTIONS              4
+#define MAX_EXAM_POOL            32      // questions in one exam file
+#define MAX_EXAM_QUESTIONS       20      // questions drawn for one attempt
+#define MAX_ACCEPT               12      // accepted answers for one typed question
+#define MAX_ANSWER_LEN           80      // typed answers longer than this are cut off
 
 #define MAX_TRACE_CODE_LINES     8       // keeps the trace and predict page layouts from overflowing
 #define MAX_PREDICT_CODE_LINES   8
@@ -105,6 +109,7 @@ typedef struct TopicRef {
 typedef struct SectionDef {
     char name[48];
     char description[128];
+    char examFile[64];          // "" when the section has no exam yet
     TopicRef topics[MAX_TOPICS_PER_SECTION];
     int topicCount;
 } SectionDef;
@@ -121,5 +126,43 @@ const char *GetContentError(void);              // "" when the last load succeed
 // The Lesson must be zeroed before the first call; always call UnloadLesson when done.
 bool LoadLesson(const char *path, Lesson *lesson, char *err, int errSize);
 void UnloadLesson(Lesson *lesson);
+
+//----------------------------------------------------------------------------------
+// Section exam (see docs/CONTENT_FORMAT.md)
+//----------------------------------------------------------------------------------
+typedef enum ExamQuestionKind { EXAM_CHOICE, EXAM_TYPED } ExamQuestionKind;
+
+typedef struct ExamQuestion {
+    ExamQuestionKind kind;
+    char *prompt;
+    char *code;                         // optional code shown with the question (typed: contains the ____ blank)
+    char lang[8];                       // "c" or "cpp"
+    char *options[MAX_OPTIONS];         // choice
+    int optionCount;
+    int correct;                        // 0-based
+    char *accept[MAX_ACCEPT];           // typed: accepted answers, already normalised
+    int acceptCount;
+    char *shown;                        // typed: first accepted answer as written, shown as the model answer
+    char *why;
+} ExamQuestion;
+
+typedef struct Exam {
+    char title[64];
+    int passPercent;                    // default 70
+    int drawChoice, drawTyped;          // how many of each kind to draw; 0 and 0 = use the whole pool
+    ExamQuestion pool[MAX_EXAM_POOL];
+    int poolCount;
+} Exam;
+
+bool LoadExam(const char *path, Exam *exam, char *err, int errSize);   // exam must be zeroed first
+void UnloadExam(Exam *exam);
+
+// Typed answers are compared after: lower-casing, removing all spaces/tabs, dropping a trailing ';'
+void NormalizeAnswer(const char *in, char *out, int outSize);
+bool ExamAnswerMatches(const ExamQuestion *q, const char *typed);
+
+// Picks the questions for one attempt (random choice and order). Writes pool indices to out
+// and returns how many (at most max). seed makes the draw repeatable for tests.
+int ExamDraw(const Exam *exam, int *out, int max, unsigned seed);
 
 #endif // CONTENT_H
