@@ -1,5 +1,8 @@
 #include "ui.h"
-#include "screens.h"    // for the shared font
+#include "screens.h"    // for the shared fonts
+#include "codepanel.h"  // CODE_FONT_SIZE
+
+#include <string.h>
 
 #include <string.h>
 

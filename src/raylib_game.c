@@ -25,8 +25,12 @@ int selectedTopic = 0;
 //----------------------------------------------------------------------------------
 // Module Variables
 //----------------------------------------------------------------------------------
-static const int screenWidth = 960;
-static const int screenHeight = 540;
+static const int screenWidth = GAME_WIDTH;
+static const int screenHeight = GAME_HEIGHT;
+
+// Everything is drawn into this fixed-size canvas, then scaled to the window with black bars
+static RenderTexture2D canvas;
+static bool startFullscreen = true;     // F11 or Alt+Enter toggles at any time
 
 // Table of screens, indexed by GameScreen. To add a screen: add it to the enum
 // in screens.h, write its five functions, and add one line here.
@@ -35,6 +39,7 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [SECTIONS] = { InitSectionsScreen, UpdateSectionsScreen, DrawSectionsScreen, UnloadSectionsScreen, FinishSectionsScreen },
     [TOPICS]   = { InitTopicsScreen,   UpdateTopicsScreen,   DrawTopicsScreen,   UnloadTopicsScreen,   FinishTopicsScreen },
     [LESSON]   = { InitLessonScreen,   UpdateLessonScreen,   DrawLessonScreen,   UnloadLessonScreen,   FinishLessonScreen },
+    [EXAM]     = { InitExamScreen,     UpdateExamScreen,     DrawExamScreen,     UnloadExamScreen,     FinishExamScreen },
 };
 
 // Fade transition state
@@ -47,6 +52,8 @@ static GameScreen transToScreen = UNKNOWN;
 static void TransitionToScreen(GameScreen screen);
 static void UpdateTransition(void);
 static void UpdateDrawFrame(void);
+static void ToggleFullscreenMode(void);
+static Rectangle CanvasDestination(void);
 
 // Resources are found next to the executable, so it works from any working directory.
 // (CMake copies src/resources there; the Makefile build runs from src/ directly.)
@@ -60,9 +67,15 @@ const char *ResourcePath(const char *relativePath)
 //----------------------------------------------------------------------------------
 int main(void)
 {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "C Learning App");
+    SetWindowMinSize(480, 270);
     SetExitKey(KEY_NULL);           // ESC is used for "back"; the window close button still quits
     SetTargetFPS(60);
+
+    canvas = LoadRenderTexture(screenWidth, screenHeight);
+    SetTextureFilter(canvas.texture, TEXTURE_FILTER_BILINEAR);
+    if (startFullscreen) ToggleFullscreenMode();
 
     font = GetFontDefault();        // TODO: load a nicer UI font from resources/
 
@@ -83,6 +96,7 @@ int main(void)
     screens[currentScreen].unload();
 
     UnloadFont(monoFont);
+    UnloadRenderTexture(canvas);
     CloseWindow();
 
     return 0;
@@ -136,9 +150,36 @@ static void UpdateTransition(void)
     }
 }
 
+// Borderless full screen where raylib supports it (5.5+), real full screen otherwise
+static void ToggleFullscreenMode(void)
+{
+#if (RAYLIB_VERSION_MAJOR > 5) || (RAYLIB_VERSION_MAJOR == 5 && RAYLIB_VERSION_MINOR >= 5)
+    ToggleBorderlessWindowed();
+#else
+    ToggleFullscreen();
+#endif
+}
+
+// Where the canvas lands in the window: as large as fits, same shape, centred
+static Rectangle CanvasDestination(void)
+{
+    float w = (float)GetScreenWidth();
+    float h = (float)GetScreenHeight();
+    float scale = (w/screenWidth < h/screenHeight) ? w/screenWidth : h/screenHeight;
+    float dw = screenWidth*scale, dh = screenHeight*scale;
+    return (Rectangle){ (w - dw)/2.0f, (h - dh)/2.0f, dw, dh };
+}
+
 // Update and draw one frame
 static void UpdateDrawFrame(void)
 {
+    if (IsKeyPressed(KEY_F11) || (IsKeyPressed(KEY_ENTER) && (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)))) ToggleFullscreenMode();
+
+    // Screens work in canvas coordinates, so map the mouse from window to canvas
+    Rectangle dest = CanvasDestination();
+    SetMouseOffset((int)-dest.x, (int)-dest.y);
+    SetMouseScale(screenWidth/dest.width, screenHeight/dest.height);
+
     // Update (input is ignored while a transition is running)
     if (!onTransition)
     {
@@ -149,14 +190,22 @@ static void UpdateDrawFrame(void)
     }
     else UpdateTransition();
 
-    // Draw
-    BeginDrawing();
+    // Draw into the canvas
+    BeginTextureMode(canvas);
 
         ClearBackground(UI_BG);
 
         screens[currentScreen].draw();
 
-        if (onTransition) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, transAlpha));
+        if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
+
+    EndTextureMode();
+
+    // Scale the canvas to the window (render textures are stored upside down, hence the negative height)
+    BeginDrawing();
+
+        ClearBackground(BLACK);
+        DrawTexturePro(canvas.texture, (Rectangle){ 0, 0, (float)screenWidth, -(float)screenHeight }, dest, (Vector2){ 0, 0 }, 0.0f, WHITE);
 
     EndDrawing();
 }

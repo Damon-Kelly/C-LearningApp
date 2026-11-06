@@ -13,6 +13,11 @@
 
 #include "raylib.h"
 
+// The game is drawn on a fixed 960x540 canvas that is scaled to fit the window (or full screen).
+// All layout code uses these instead of the real window size.
+#define GAME_WIDTH   960
+#define GAME_HEIGHT  540
+
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
 //----------------------------------------------------------------------------------
@@ -22,6 +27,7 @@ typedef enum GameScreen {
     SECTIONS,
     TOPICS,
     LESSON,
+    EXAM,
     SCREEN_COUNT
 } GameScreen;
 
@@ -73,5 +79,11 @@ void UpdateLessonScreen(void);
 void DrawLessonScreen(void);
 void UnloadLessonScreen(void);
 GameScreen FinishLessonScreen(void);
+
+void InitExamScreen(void);
+void UpdateExamScreen(void);
+void DrawExamScreen(void);
+void UnloadExamScreen(void);
+GameScreen FinishExamScreen(void);
 
 #endif // SCREENS_H

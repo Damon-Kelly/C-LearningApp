@@ -1,0 +1,193 @@
+# Dynamic memory: malloc/free and new/delete.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Dynamic memory
+@summary malloc, free, new and delete
+
+#---------------------------------------------------------------------------
+@page explain Memory you ask for
+@text
+Local variables disappear when their function ends, and their size is fixed when you write the code. When you need memory that lives longer, or whose size is only known while running, you ask for it from the heap with malloc.
+@end
+@text
+malloc(n) reserves n bytes and returns the address of the block (or NULL if it fails). You store that address in a pointer and use it like any other. The contents start out as garbage, so write before you read.
+@end
+@code c
+int *p = malloc(sizeof(int));
+*p = 25;
+printf("%d\n", *p);
+free(p);
+@output
+25
+@end
+@text
+Use sizeof so the byte count is right for the type. For an array, multiply by the number of elements. The result can be indexed like an array.
+@end
+@code c
+int n = 4;
+int *a = malloc(n * sizeof(int));
+for (int i = 0; i < n; i++) {
+    a[i] = i * i;
+}
+printf("%d %d\n", a[2], a[3]);
+free(a);
+@output
+4 9
+@end
+
+#---------------------------------------------------------------------------
+@page explain Giving it back
+@text
+Heap memory is never released automatically. Every malloc needs exactly one free, and after free the block is no longer yours. Three classic mistakes:
+@end
+@text
+- Forgetting to free: a memory leak.
+- Using a block after it was freed: a dangling pointer.
+- Freeing the same block twice: undefined behaviour.
+@end
+@text
+A good habit is to set the pointer to NULL right after freeing it. free(NULL) does nothing, and a NULL check will catch accidental reuse.
+@end
+@code c
+int *p = malloc(sizeof(int));
+*p = 1;
+free(p);
+p = NULL;
+if (p == NULL) {
+    printf("freed and cleared\n");
+}
+@output
+freed and cleared
+@end
+@text
+Heap memory survives after the function returns, so a function can hand a block back to its caller. The caller then owns it and must free it. Never return the address of a local variable: that variable is gone when the function ends.
+@end
+@code c
+int *makeSquares(int n) {
+    int *a = malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) {
+        a[i] = i * i;
+    }
+    return a;
+}
+
+int main(void) {
+    int *s = makeSquares(5);
+    printf("%d\n", s[4]);
+    free(s);
+    return 0;
+}
+@output
+16
+@end
+@text
+In C++ the operators new and delete do the same job. Match them: new goes with delete, and new[] goes with delete[]. Do not mix them with malloc and free.
+@end
+@code cpp
+int *p = new int(7);
+int *arr = new int[3]{1, 2, 3};
+cout << *p << " " << arr[2] << endl;
+delete p;
+delete[] arr;
+@output
+7 3
+@end
+
+#---------------------------------------------------------------------------
+@page trace A dangling pointer
+@code c
+int *p = malloc(sizeof(int));
+*p = 7;
+int *q = p;
+free(p);
+p = NULL;
+@end
+@step 1
+@cell p int* ->heap 1000
+@cell heap int ? 5000
+@note malloc reserves a block on the heap (address 5000) and p stores its address. The block holds garbage.
+@step 2
+@cell p int* ->heap 1000
+@cell heap int 7 5000
+@note *p = 7 writes into the heap block.
+@step 3
+@cell p int* ->heap 1000
+@cell heap int 7 5000
+@cell q int* ->heap 1008
+@note q = p copies the address. There is still only one block, now with two pointers to it.
+@step 4
+@cell p int* ->heap 1000
+@cell heap int freed 5000
+@cell q int* ->heap 1008
+@note free(p) gives the block back. p and q still hold its address, but it is not theirs any more.
+@step 5
+@cell p int* NULL 1000
+@cell heap int freed 5000
+@cell q int* ->heap 1008
+@note p = NULL clears p, but q is still dangling. Using *q now would be a bug.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int *a = malloc(3 * sizeof(int));
+for (int i = 0; i < 3; i++) {
+    a[i] = i + 1;
+}
+int *b = a;
+b[0] = 50;
+printf("%d %d\n", a[0], a[1]);
+free(a);
+@output
+50 2
+@end
+@option 1 2
+@option 50 2
+@option 50 50
+@option 1 50
+@answer 2
+@why int *b = a copies the address, not the block. a and b both point at the same three ints, so b[0] = 50 changes a[0] too.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does malloc return?
+@opt The value stored in the new memory
+@opt The address of the new block, or NULL if it failed
+@opt The number of bytes reserved
+@opt A copy of the block
+@correct 2
+@why You keep the returned address in a pointer. Always be ready for NULL if the request fails.
+
+@q After int *a = malloc(10 * sizeof(int)); how do you release the memory?
+@opt free(*a);
+@opt free(&a);
+@opt delete a;
+@opt free(a);
+@correct 4
+@why free takes the same address malloc returned. delete belongs to new in C++.
+
+@q What is a memory leak?
+@opt Reading past the end of an array
+@opt A block that was allocated but never freed
+@opt Freeing a block twice
+@opt Using a NULL pointer
+@correct 2
+@why The block stays reserved until the program ends, even though nothing needs it.
+
+@q In C++, a is created with  int *a = new int[5];  How should it be released?
+@opt delete a;
+@opt free(a);
+@opt delete[] a;
+@opt delete *a;
+@correct 3
+@why Memory from new[] must be released with delete[].
+
+@q Which line is a use-after-free bug?
+@opt free(p); p = NULL;
+@opt free(p); *p = 3;
+@opt int *p = malloc(sizeof(int));
+@opt if (p == NULL) return;
+@correct 2
+@why After free(p) the block is not yours. Writing through p is undefined behaviour.

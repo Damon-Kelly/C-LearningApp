@@ -107,7 +107,7 @@ void UpdateTitleScreen(void)
 
 void DrawTitleScreen(void)
 {
-    float cx = GetScreenWidth()/2.0f;
+    float cx = GAME_WIDTH/2.0f;
 
     UiDrawTextCentered("C Learning App", cx, 30, 48, UI_TEXT);
     UiDrawTextCentered(signUpMode ? "Create your account" : "Log in to start learning C and C++", cx, 88, 20, UI_MUTED);

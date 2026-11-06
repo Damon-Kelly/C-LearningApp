@@ -2,6 +2,7 @@
 #
 #   @section Name | Short description
 #   @topic file.txt | Topic title | One-line summary        (belongs to the section above it)
+#   @exam file.txt                                          (the section's final exam, optional)
 #
 # A section with no @topic lines shows as "Coming soon".
 
@@ -15,5 +16,10 @@
 
 @section Pointers and memory | Addresses, pointer arithmetic, dynamic memory
 @topic pointers_basics.txt | Pointers: & and * | What a pointer stores and how to follow it
+@topic pointers_functions.txt | Pointers and functions | How a function can change its caller's variables
+@topic pointers_arrays.txt | Pointers and arrays | Pointer arithmetic and arrays as parameters
+@topic pointers_double.txt | Pointers to pointers | int ** and changing a pointer from a function
+@topic pointers_dynamic.txt | Dynamic memory | malloc, free, new and delete
+@exam exam_pointers.txt
 
 @section Linked lists and classes | Node-based lists, class lists and destructors
