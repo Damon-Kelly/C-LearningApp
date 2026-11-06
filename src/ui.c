@@ -1,6 +1,8 @@
 #include "ui.h"
 #include "screens.h"    // for the shared font
 
+#include <string.h>
+
 bool UiButtonClicked(Rectangle bounds)
 {
     return CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
@@ -98,4 +100,68 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 float UiMeasureWrappedText(const char *text, float width, float fontSize)
 {
     return WrapText(text, (Rectangle){ 0, 0, width, 0 }, fontSize, WHITE, false, false);
+}
+
+//----------------------------------------------------------------------------------
+// Text box
+//----------------------------------------------------------------------------------
+static void AppendChar(char *buf, int bufSize, int c)
+{
+    int len = (int)strlen(buf);
+    if (c >= 32 && c <= 126 && len < bufSize - 1)   // the default font only has plain ASCII
+    {
+        buf[len] = (char)c;
+        buf[len + 1] = '\0';
+    }
+}
+
+void UiTextBoxUpdate(char *buf, int bufSize)
+{
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        AppendChar(buf, bufSize, key);
+        key = GetCharPressed();
+    }
+
+    int len = (int)strlen(buf);
+    if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
+
+    bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+    if (ctrl && IsKeyPressed(KEY_V))
+    {
+        const char *clip = GetClipboardText();
+        if (clip != NULL) for (; *clip; clip++) AppendChar(buf, bufSize, (unsigned char)*clip);
+    }
+}
+
+void UiTextBoxDraw(Rectangle bounds, const char *label, const char *buf, bool active, bool masked)
+{
+    DrawTextEx(font, label, (Vector2){ bounds.x, bounds.y - 20 }, 16, 1.6f, UI_MUTED);
+
+    DrawRectangleRec(bounds, WHITE);
+    DrawRectangleLinesEx(bounds, active ? 2.0f : 1.0f, active ? UI_ACCENT : (Color){ 200, 204, 216, 255 });
+
+    char shown[128];
+    int n = (int)strlen(buf);
+    if (n > (int)sizeof(shown) - 1) n = (int)sizeof(shown) - 1;
+    if (masked) memset(shown, '*', (size_t)n);
+    else memcpy(shown, buf, (size_t)n);
+    shown[n] = '\0';
+
+    const float size = 20.0f;
+    const float spacing = 2.0f;
+
+    // Long text scrolls: drop characters from the front until the end fits
+    const char *start = shown;
+    while (*start && MeasureTextEx(font, start, size, spacing).x > bounds.width - 24) start++;
+
+    Vector2 pos = { bounds.x + 10, bounds.y + (bounds.height - size)/2.0f };
+    DrawTextEx(font, start, pos, size, spacing, UI_TEXT);
+
+    if (active && ((int)(GetTime()*2.0) % 2 == 0))
+    {
+        float w = MeasureTextEx(font, start, size, spacing).x;
+        DrawRectangle((int)(pos.x + w + 2), (int)pos.y, 2, (int)size, UI_TEXT);
+    }
 }

@@ -40,4 +40,10 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 // Height the text would take when wrapped to the given width (draws nothing)
 float UiMeasureWrappedText(const char *text, float width, float fontSize);
 
+// Single-line text box, split like buttons: call UiTextBoxUpdate in Update for the box that
+// has focus (typing, backspace, Ctrl+V), and UiTextBoxDraw in Draw for every box.
+// masked=true shows * instead of the characters (passwords).
+void UiTextBoxUpdate(char *buf, int bufSize);
+void UiTextBoxDraw(Rectangle bounds, const char *label, const char *buf, bool active, bool masked);
+
 #endif // UI_H
