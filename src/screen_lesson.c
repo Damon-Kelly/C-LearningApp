@@ -18,6 +18,7 @@
 #include "content.h"
 #include "codepanel.h"
 #include "memview.h"
+#include "exam_hooks.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -353,7 +354,11 @@ static void UpdateQuiz(const Page *page)
     }
     else if (UiButtonClicked(nextButton) || IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE))
     {
-        if (quizIndex + 1 >= page->questionCount) quizDone = true;
+        if (quizIndex + 1 >= page->questionCount)
+        {
+            quizDone = true;
+            OnTopicQuizFinished(selectedSection, selectedTopic, quizScore, page->questionCount);
+        }
         else
         {
             quizIndex++;
@@ -367,7 +372,7 @@ static void DrawQuiz(const Page *page)
 {
     if (quizDone)
     {
-        float cx = GetScreenWidth()/2.0f;
+        float cx = GAME_WIDTH/2.0f;
         int percent = (page->questionCount > 0) ? (quizScore*100)/page->questionCount : 0;
 
         const char *message = "Keep going - re-read the lesson and try again.";

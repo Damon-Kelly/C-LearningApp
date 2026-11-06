@@ -57,6 +57,16 @@ static void CopyString(char *dst, int dstSize, const char *src)
     snprintf(dst, (size_t)dstSize, "%s", src);
 }
 
+// "c" unless the text starts with another language word ("cpp"); extra words are ignored
+static void CopyLang(char *dst, int dstSize, const char *text)
+{
+    int n = 0;
+    while (*text == ' ' || *text == '\t') text++;
+    while (*text != '\0' && !isspace((unsigned char)*text) && n < dstSize - 1) dst[n++] = *text++;
+    dst[n] = '\0';
+    if (n == 0) CopyString(dst, dstSize, "c");
+}
+
 // Trims both ends in place and returns the start of the trimmed text
 static char *Trim(char *s)
 {
@@ -214,6 +224,12 @@ bool LoadManifest(const char *path)
             CopyString(topic->file, sizeof(topic->file), fields[0]);
             CopyString(topic->title, sizeof(topic->title), fields[1]);
             if (fieldCount > 2) CopyString(topic->summary, sizeof(topic->summary), fields[2]);
+        }
+        else if (strcmp(keyword, "exam") == 0)
+        {
+            if (sectionCount == 0) { snprintf(contentError, sizeof(contentError), "%s:%d: @exam must come after a @section", file, lineNo); ok = false; break; }
+            if (!hasRest || fields[0][0] == '\0') { snprintf(contentError, sizeof(contentError), "%s:%d: @exam needs a file name", file, lineNo); ok = false; break; }
+            CopyString(sections[sectionCount - 1].examFile, sizeof(sections[0].examFile), fields[0]);
         }
         else
         {
@@ -393,7 +409,7 @@ static void HandleDirective(Parser *p, char *line)
 
         Item *item = NewItem(p, ITEM_CODE);
         if (item == NULL) return;
-        CopyString(item->lang, sizeof(item->lang), rest[0] != '\0' ? rest : "c");
+        CopyLang(item->lang, sizeof(item->lang), rest);
         p->codeItem = item;
         p->mode = MODE_CODE;
         BufReset(&p->buf);
@@ -625,4 +641,309 @@ void UnloadLesson(Lesson *lesson)
     }
 
     memset(lesson, 0, sizeof(*lesson));
+}
+
+//----------------------------------------------------------------------------------
+// Section exam
+//----------------------------------------------------------------------------------
+void NormalizeAnswer(const char *in, char *out, int outSize)
+{
+    int n = 0;
+    for (const char *c = in; *c != '\0' && n < outSize - 1; c++)
+    {
+        if (*c == ' ' || *c == '\t' || *c == '\r' || *c == '\n') continue;
+        out[n++] = (char)tolower((unsigned char)*c);
+    }
+    out[n] = '\0';
+    if (n > 0 && out[n - 1] == ';') out[n - 1] = '\0';
+}
+
+bool ExamAnswerMatches(const ExamQuestion *q, const char *typed)
+{
+    char norm[MAX_ANSWER_LEN*2];
+    NormalizeAnswer(typed, norm, sizeof(norm));
+    if (norm[0] == '\0') return false;
+
+    for (int i = 0; i < q->acceptCount; i++) if (strcmp(norm, q->accept[i]) == 0) return true;
+    return false;
+}
+
+typedef enum ExamMode { EMODE_NONE, EMODE_CODE, EMODE_SKIP } ExamMode;
+
+typedef struct ExamParser {
+    Exam *exam;
+    ExamQuestion *q;        // question being filled (NULL before the first @q / @typed)
+    ExamMode mode;
+    Buf buf;
+    const char *file;
+    int lineNo;             // 0 while validating
+    char *err;
+    int errSize;
+    bool failed;
+} ExamParser;
+
+static void ExamFail(ExamParser *p, const char *fmt, ...)
+{
+    if (p->failed) return;
+    p->failed = true;
+
+    char msg[200];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    if (p->lineNo > 0) snprintf(p->err, (size_t)p->errSize, "%s:%d: %s", p->file, p->lineNo, msg);
+    else snprintf(p->err, (size_t)p->errSize, "%s: %s", p->file, msg);
+}
+
+static ExamQuestion *NewExamQuestion(ExamParser *p, ExamQuestionKind kind, const char *prompt)
+{
+    if (p->exam->poolCount >= MAX_EXAM_POOL) { ExamFail(p, "too many questions in the pool (max %d)", MAX_EXAM_POOL); return NULL; }
+    ExamQuestion *q = &p->exam->pool[p->exam->poolCount++];
+    q->kind = kind;
+    q->prompt = DupString(prompt);
+    CopyString(q->lang, sizeof(q->lang), "c");
+    return q;
+}
+
+static void ExamDirective(ExamParser *p, char *line)
+{
+    char *rest = line + 1;
+    while (*rest != '\0' && !isspace((unsigned char)*rest)) rest++;
+    if (*rest != '\0') *rest++ = '\0';
+    rest = Trim(rest);
+    const char *kw = line + 1;
+
+    if (p->mode == EMODE_CODE)
+    {
+        if (strcmp(kw, "end") == 0) { p->q->code = TakeBuf(&p->buf); BufReset(&p->buf); p->mode = EMODE_NONE; }
+        else ExamFail(p, "unexpected @%s inside a @code block (missing @end?)", kw);
+        return;
+    }
+    if (p->mode == EMODE_SKIP)
+    {
+        // @test ... @expect ... @end is only read by tools/verify_content.py
+        if (strcmp(kw, "end") == 0) p->mode = EMODE_NONE;
+        return;
+    }
+
+    Exam *exam = p->exam;
+
+    if (strcmp(kw, "exam") == 0) CopyString(exam->title, sizeof(exam->title), rest);
+    else if (strcmp(kw, "pass") == 0)
+    {
+        exam->passPercent = atoi(rest);
+        if (exam->passPercent < 1 || exam->passPercent > 100) ExamFail(p, "@pass must be a percentage from 1 to 100");
+    }
+    else if (strcmp(kw, "draw") == 0)
+    {
+        if (sscanf(rest, "%d %d", &exam->drawChoice, &exam->drawTyped) != 2 || exam->drawChoice < 0 || exam->drawTyped < 0)
+            ExamFail(p, "@draw needs two numbers: how many choice questions, how many typed (example: @draw 7 3)");
+    }
+    else if (strcmp(kw, "q") == 0) p->q = NewExamQuestion(p, EXAM_CHOICE, rest);
+    else if (strcmp(kw, "typed") == 0) p->q = NewExamQuestion(p, EXAM_TYPED, rest);
+    else if (strcmp(kw, "code") == 0)
+    {
+        if (p->q == NULL) { ExamFail(p, "@code must come after a @q or @typed"); return; }
+        if (p->q->code != NULL) { ExamFail(p, "a question can only have one @code block"); return; }
+        CopyLang(p->q->lang, sizeof(p->q->lang), rest);
+        p->mode = EMODE_CODE;
+        BufReset(&p->buf);
+    }
+    else if (strcmp(kw, "opt") == 0)
+    {
+        if (p->q == NULL || p->q->kind != EXAM_CHOICE) { ExamFail(p, "@opt must come after a @q"); return; }
+        if (p->q->optionCount >= MAX_OPTIONS) { ExamFail(p, "too many options (max %d)", MAX_OPTIONS); return; }
+        p->q->options[p->q->optionCount++] = DupString(rest);
+    }
+    else if (strcmp(kw, "correct") == 0)
+    {
+        if (p->q == NULL || p->q->kind != EXAM_CHOICE) { ExamFail(p, "@correct must come after a @q"); return; }
+        p->q->correct = atoi(rest) - 1;
+    }
+    else if (strcmp(kw, "accept") == 0)
+    {
+        if (p->q == NULL || p->q->kind != EXAM_TYPED) { ExamFail(p, "@accept must come after a @typed"); return; }
+        if (p->q->acceptCount >= MAX_ACCEPT) { ExamFail(p, "too many @accept lines (max %d)", MAX_ACCEPT); return; }
+        if (rest[0] == '\0') { ExamFail(p, "@accept needs an answer"); return; }
+
+        char norm[MAX_ANSWER_LEN*2];
+        NormalizeAnswer(rest, norm, sizeof(norm));
+        p->q->accept[p->q->acceptCount++] = DupString(norm);
+        if (p->q->shown == NULL) p->q->shown = DupString(rest);
+    }
+    else if (strcmp(kw, "why") == 0)
+    {
+        if (p->q == NULL) { ExamFail(p, "@why must come after a @q or @typed"); return; }
+        free(p->q->why);
+        p->q->why = DupString(rest);
+    }
+    else if (strcmp(kw, "test") == 0)
+    {
+        if (p->q == NULL || p->q->kind != EXAM_TYPED) { ExamFail(p, "@test must come after a @typed"); return; }
+        p->mode = EMODE_SKIP;
+    }
+    else if (strcmp(kw, "end") == 0) ExamFail(p, "@end without a matching @code or @test");
+    else ExamFail(p, "unknown directive @%s", kw);
+}
+
+static void ValidateExam(ExamParser *p)
+{
+    p->lineNo = 0;
+    Exam *exam = p->exam;
+
+    if (exam->title[0] == '\0') { ExamFail(p, "missing @exam title"); return; }
+    if (exam->poolCount == 0) { ExamFail(p, "the exam has no questions"); return; }
+
+    int choice = 0, typed = 0;
+    for (int i = 0; i < exam->poolCount && !p->failed; i++)
+    {
+        const ExamQuestion *q = &exam->pool[i];
+        if (q->kind == EXAM_CHOICE)
+        {
+            choice++;
+            if (q->optionCount < 2) ExamFail(p, "question %d needs at least 2 @opt lines", i + 1);
+            else if (q->correct < 0 || q->correct >= q->optionCount) ExamFail(p, "question %d has a missing or invalid @correct", i + 1);
+        }
+        else
+        {
+            typed++;
+            if (q->acceptCount == 0) ExamFail(p, "typed question %d needs at least one @accept line", i + 1);
+            else if (q->code != NULL && CountLines(q->code) > MAX_PREDICT_CODE_LINES) ExamFail(p, "question %d code is longer than %d lines", i + 1, MAX_PREDICT_CODE_LINES);
+        }
+        if (q->kind == EXAM_CHOICE && q->code != NULL && CountLines(q->code) > MAX_PREDICT_CODE_LINES) ExamFail(p, "question %d code is longer than %d lines", i + 1, MAX_PREDICT_CODE_LINES);
+    }
+    if (p->failed) return;
+
+    if (exam->drawChoice == 0 && exam->drawTyped == 0)
+    {
+        exam->drawChoice = choice;
+        exam->drawTyped = typed;
+    }
+    if (exam->drawChoice > choice) ExamFail(p, "@draw asks for %d choice questions but the pool only has %d", exam->drawChoice, choice);
+    else if (exam->drawTyped > typed) ExamFail(p, "@draw asks for %d typed questions but the pool only has %d", exam->drawTyped, typed);
+    else if (exam->drawChoice + exam->drawTyped > MAX_EXAM_QUESTIONS) ExamFail(p, "@draw asks for more than %d questions in one attempt", MAX_EXAM_QUESTIONS);
+}
+
+bool LoadExam(const char *path, Exam *exam, char *err, int errSize)
+{
+    err[0] = '\0';
+
+    char *text = ReadWholeFile(path);
+    if (text == NULL)
+    {
+        snprintf(err, (size_t)errSize, "Could not open %s", path);
+        return false;
+    }
+
+    ExamParser parser = { 0 };
+    parser.exam = exam;
+    parser.file = BaseName(path);
+    parser.err = err;
+    parser.errSize = errSize;
+    exam->passPercent = 70;
+
+    const char *p = text;
+    while (p != NULL && !parser.failed)
+    {
+        char line[512];
+        bool tooLong;
+        p = NextLine(p, line, sizeof(line), &tooLong);
+        parser.lineNo++;
+
+        if (tooLong) { ExamFail(&parser, "line is longer than %d characters", (int)sizeof(line) - 1); break; }
+
+        if (parser.mode == EMODE_CODE || parser.mode == EMODE_SKIP)
+        {
+            if (line[0] == '@') ExamDirective(&parser, line);
+            else if (parser.mode == EMODE_CODE)
+            {
+                BufAppend(&parser.buf, line, (int)strlen(line));
+                BufAppend(&parser.buf, "\n", 1);
+            }
+            continue;
+        }
+
+        char *s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        if (s[0] == '\0' || s[0] == '#') continue;
+        if (s[0] != '@') { ExamFail(&parser, "expected a line starting with @ (found text outside a block)"); break; }
+        ExamDirective(&parser, s);
+    }
+
+    if (!parser.failed && parser.mode != EMODE_NONE) ExamFail(&parser, "a @code or @test block was never closed with @end");
+    if (!parser.failed) ValidateExam(&parser);
+
+    free(parser.buf.data);
+    free(text);
+    return !parser.failed;
+}
+
+void UnloadExam(Exam *exam)
+{
+    for (int i = 0; i < exam->poolCount; i++)
+    {
+        ExamQuestion *q = &exam->pool[i];
+        free(q->prompt);
+        free(q->code);
+        for (int j = 0; j < q->optionCount; j++) free(q->options[j]);
+        for (int j = 0; j < q->acceptCount; j++) free(q->accept[j]);
+        free(q->shown);
+        free(q->why);
+    }
+    memset(exam, 0, sizeof(*exam));
+}
+
+// Small repeatable random numbers (xorshift32); keeps this file free of raylib
+static unsigned NextRandom(unsigned *state)
+{
+    unsigned x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
+}
+
+// Moves n randomly chosen entries of list[0..count-1] to the front
+static void PickFront(int *list, int count, int n, unsigned *rng)
+{
+    for (int i = 0; i < n && i < count; i++)
+    {
+        int j = i + (int)(NextRandom(rng) % (unsigned)(count - i));
+        int tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    }
+}
+
+int ExamDraw(const Exam *exam, int *out, int max, unsigned seed)
+{
+    unsigned rng = (seed == 0) ? 2463534242u : seed;
+
+    int choice[MAX_EXAM_POOL], typed[MAX_EXAM_POOL];
+    int nc = 0, nt = 0;
+    for (int i = 0; i < exam->poolCount; i++)
+    {
+        if (exam->pool[i].kind == EXAM_CHOICE) choice[nc++] = i;
+        else typed[nt++] = i;
+    }
+
+    int wantC = exam->drawChoice, wantT = exam->drawTyped;
+    if (wantC > nc) wantC = nc;
+    if (wantT > nt) wantT = nt;
+
+    PickFront(choice, nc, wantC, &rng);
+    PickFront(typed, nt, wantT, &rng);
+
+    int total = 0;
+    for (int i = 0; i < wantC && total < max; i++) out[total++] = choice[i];
+    for (int i = 0; i < wantT && total < max; i++) out[total++] = typed[i];
+
+    // Shuffle the combined order (Fisher-Yates)
+    for (int i = total - 1; i > 0; i--)
+    {
+        int j = (int)(NextRandom(&rng) % (unsigned)(i + 1));
+        int tmp = out[i]; out[i] = out[j]; out[j] = tmp;
+    }
+    return total;
 }

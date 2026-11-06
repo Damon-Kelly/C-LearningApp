@@ -1,0 +1,302 @@
+# Section exam for "Pointers and memory".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Pointers and memory exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q What does this program print?
+@code c
+int x = 8;
+int *p = &x;
+*p = *p * 2;
+printf("%d\n", x);
+@end
+@opt 8
+@opt 16
+@opt 0
+@opt 2
+@correct 2
+@why p points at x, so *p = *p * 2 doubles x itself.
+
+@q Which declaration makes p a pointer that can hold the address of a double?
+@opt double p*;
+@opt double *p;
+@opt *double p;
+@opt pointer double p;
+@correct 2
+@why The star goes with the name: double *p declares p as a pointer to double.
+
+@q What does this program print?
+@code c
+void f(int n) { n = 10; }
+
+int main(void) {
+    int x = 1;
+    f(x);
+    printf("%d\n", x);
+}
+@end
+@opt 1
+@opt 10
+@opt 0
+@opt 11
+@correct 1
+@why f receives a copy of x. Changing the copy does not touch the caller's x.
+
+@q Why does a function void swap(int a, int b) fail to swap the caller's variables?
+@opt a and b are copies of the arguments
+@opt A swap needs a temporary array
+@opt ints cannot be assigned inside functions
+@opt A swap function must return int
+@correct 1
+@why Arguments are passed by value. Passing addresses (int *) lets the function reach the originals.
+
+@q What does this program print?
+@code c
+int a[4] = {5, 6, 7, 8};
+int *p = a + 2;
+printf("%d %d\n", *p, p[-1]);
+@end
+@opt 7 6
+@opt 7 8
+@opt 6 7
+@opt 8 7
+@correct 1
+@why p points at a[2], which is 7. p[-1] means *(p - 1), the element before it: a[1], which is 6.
+
+@q If p is an int *, how far does p + 3 move the address?
+@opt 3 bytes
+@opt 3 ints (3 * sizeof(int) bytes)
+@opt 3 pointers
+@opt It does not move, it adds 3 to the value
+@correct 2
+@why Pointer arithmetic is scaled by the size of the pointed-at type.
+
+@q What is wrong with:  int *p;  *p = 5;  ?
+@opt Nothing, this is fine
+@opt p has no valid address yet, so writing through it is undefined behaviour
+@opt 5 cannot be stored in an int
+@opt * cannot be used on the left of =
+@correct 2
+@why An uninitialised pointer holds garbage. Point it at a real variable or allocated memory first.
+
+@q What is a dangling pointer?
+@opt A pointer that is NULL
+@opt A pointer declared with no type
+@opt A pointer holding the address of memory that is no longer valid, such as freed memory
+@opt A pointer to a pointer
+@correct 3
+@why Using it is undefined behaviour. Setting a pointer to NULL after free(p) makes the mistake easier to catch.
+
+@q What does this program print?
+@code c
+int a = 1, b = 2;
+int *p = &a;
+int **pp = &p;
+*pp = &b;
+*p = 9;
+printf("%d %d\n", a, b);
+@end
+@opt 1 9
+@opt 9 2
+@opt 9 9
+@opt 1 2
+@correct 1
+@why *pp = &b re-aims p at b. Then *p = 9 writes into b. a is never touched.
+
+@q What does this program print?
+@code c
+int *p = malloc(sizeof(int));
+*p = 4;
+int *q = p;
+*q = 11;
+printf("%d\n", *p);
+free(p);
+@end
+@opt 4
+@opt 11
+@opt 15
+@opt 0
+@correct 2
+@why q = p copies the address, so p and q reach the same int. Writing 11 through q changes what p sees.
+
+@q A function must give its caller a new array. Which approach is correct?
+@opt Return the address of a local array
+@opt Allocate a block with malloc and return its address; the caller frees it
+@opt Return the array by value
+@opt Return the size of the array
+@correct 2
+@why A local array is gone when the function returns. Heap memory survives until it is freed.
+
+@q In C++, which pair of lines allocates and releases an array correctly?
+@opt p = new int[5];  delete p;
+@opt p = new int[5];  delete[] p;
+@opt p = new int[5];  free(p);
+@opt p = malloc(20);  delete p;
+@correct 2
+@why Memory from new[] is released with delete[]. Do not mix new/delete with malloc/free.
+
+#===========================================================================
+# Typed answers. @test is compiled with the code (see tools/verify_content.py):
+#   - if the code or the test contains main, they are joined as they are
+#   - otherwise code and test are wrapped together inside main
+#===========================================================================
+@typed Fill in the blank so the function sets the caller's variable to zero.
+@code c
+void setToZero(int *p) {
+    ____
+}
+@end
+@accept *p = 0;
+@test
+int main(void) { int x = 5; setToZero(&x); printf("%d\n", x); return 0; }
+@expect
+0
+@end
+@why p holds the address of the caller's variable, so *p = 0 writes zero into it.
+
+@typed Declare a pointer p to int and set it to the address of x, all in one line.
+@code c
+int x = 4;
+____
+@end
+@accept int *p = &x;
+@test
+printf("%d\n", *p);
+@expect
+4
+@end
+@why int *p declares the pointer and &x is the address of x.
+
+@typed Fill in the blank so the program prints the third element, 30.
+@code c
+int a[5] = {10, 20, 30, 40, 50};
+printf("%d\n", ____);
+@end
+@accept *(a + 2)
+@accept a[2]
+@test
+@expect
+30
+@end
+@why Indexes start at 0, so the third element is a[2], which is the same as *(a + 2).
+
+@typed Allocate room for 10 ints on the heap.
+@code c
+int *a = ____;
+@end
+@accept malloc(10 * sizeof(int))
+@accept malloc(sizeof(int) * 10)
+@accept malloc(10 * sizeof(*a))
+@accept malloc(sizeof(*a) * 10)
+@accept calloc(10, sizeof(int))
+@accept calloc(10, sizeof(*a))
+@test
+a[9] = 3; printf("%d\n", a[9]); free(a);
+@expect
+3
+@end
+@why Multiply the element count by sizeof so the byte count is right on any machine.
+
+@typed Write the statement that gives the memory back.
+@code c
+int *a = malloc(10 * sizeof(int));
+a[0] = 1;
+____
+@end
+@accept free(a);
+@test
+printf("done\n");
+@expect
+done
+@end
+@why free takes the address that malloc returned.
+
+@typed Fill in the call so that x becomes 2.
+@code c
+void inc(int *n) { (*n)++; }
+
+int main(void) {
+    int x = 1;
+    inc(____);
+    printf("%d\n", x);
+}
+@end
+@accept &x
+@test
+@expect
+2
+@end
+@why inc needs the address of x, and & gives it.
+
+@typed Make pp point at p.
+@code c
+int x = 3;
+int *p = &x;
+int **pp = ____;
+@end
+@accept &p
+@test
+printf("%d\n", **pp);
+@expect
+3
+@end
+@why pp is a pointer to an int *, so it stores the address of p.
+
+@typed Fill in the body so that the caller's variable goes up by one.
+@code c
+void addOne(int *n) {
+    ____
+}
+@end
+@accept *n = *n + 1;
+@accept *n += 1;
+@accept (*n)++;
+@accept ++(*n);
+@accept ++*n;
+@accept (*n) += 1;
+@accept *n = 1 + *n;
+@test
+int main(void) { int v = 4; addOne(&v); printf("%d\n", v); return 0; }
+@expect
+5
+@end
+@why Follow n with * to reach the variable. Careful: *n++ would move the pointer instead.
+
+@typed Move p on to the next element of the array.
+@code c
+int a[3] = {1, 2, 3};
+int *p = a;
+____
+printf("%d\n", *p);
+@end
+@accept p++;
+@accept ++p;
+@accept p += 1;
+@accept p = p + 1;
+@test
+@expect
+2
+@end
+@why Adding 1 to a pointer moves it by one whole element.
+
+@typed In C++, allocate one int with the starting value 5.
+@code cpp
+int *p = ____;
+@end
+@accept new int(5)
+@accept new int{5}
+@test
+cout << *p << endl; delete p;
+@expect
+5
+@end
+@why new int(5) allocates one int on the heap and initialises it. Release it later with delete.

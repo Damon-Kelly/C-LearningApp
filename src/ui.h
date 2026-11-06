@@ -40,4 +40,9 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 // Height the text would take when wrapped to the given width (draws nothing)
 float UiMeasureWrappedText(const char *text, float width, float fontSize);
 
+// Single-line text box. Update edits buf (printable ASCII and backspace, size includes the
+// terminating zero) and returns true on the frame Enter is pressed. Draw shows it with a caret.
+bool UiTextInputUpdate(char *buf, int size);
+void UiTextInputDraw(Rectangle bounds, const char *buf, bool active);
+
 #endif // UI_H

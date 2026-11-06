@@ -1,5 +1,8 @@
 #include "ui.h"
-#include "screens.h"    // for the shared font
+#include "screens.h"    // for the shared fonts
+#include "codepanel.h"  // CODE_FONT_SIZE
+
+#include <string.h>
 
 bool UiButtonClicked(Rectangle bounds)
 {
@@ -98,4 +101,43 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 float UiMeasureWrappedText(const char *text, float width, float fontSize)
 {
     return WrapText(text, (Rectangle){ 0, 0, width, 0 }, fontSize, WHITE, false, false);
+}
+
+bool UiTextInputUpdate(char *buf, int size)
+{
+    int len = (int)strlen(buf);
+
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        if (key >= 32 && key <= 126 && len < size - 1)
+        {
+            buf[len++] = (char)key;
+            buf[len] = '\0';
+        }
+        key = GetCharPressed();
+    }
+
+    if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
+
+    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER);
+}
+
+void UiTextInputDraw(Rectangle bounds, const char *buf, bool active)
+{
+    DrawRectangleRounded(bounds, 0.2f, 8, WHITE);
+    DrawRectangleLinesEx(bounds, 2.0f, active ? UI_ACCENT : UI_MUTED);
+
+    Vector2 size = MeasureTextEx(monoFont, buf, CODE_FONT_SIZE, 0);
+    Vector2 pos = { bounds.x + 12, bounds.y + (bounds.height - size.y)/2.0f };
+    if (buf[0] == '\0') size.y = (float)CODE_FONT_SIZE;
+    pos.y = bounds.y + (bounds.height - (float)CODE_FONT_SIZE)/2.0f;
+
+    DrawTextEx(monoFont, buf, pos, CODE_FONT_SIZE, 0, UI_TEXT);
+
+    if (active && ((int)(GetTime()*2.0) % 2 == 0))
+    {
+        float cx = pos.x + size.x + 2;
+        DrawRectangle((int)cx, (int)pos.y, 2, CODE_FONT_SIZE, UI_TEXT);
+    }
 }

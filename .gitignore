@@ -80,3 +80,5 @@ android.*
 !src/shell.html
 
 /docs
+/tools
+.github/workflows

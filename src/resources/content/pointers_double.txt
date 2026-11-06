@@ -1,0 +1,168 @@
+# Pointers to pointers.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Pointers to pointers
+@summary int ** and changing a pointer from inside a function
+
+#---------------------------------------------------------------------------
+@page explain A pointer that points at a pointer
+@text
+A pointer is a variable, so it has an address too, and you can store that address in another pointer. The type gains one more star: a pointer to an int * is an int **.
+@end
+@code c
+int x = 7;
+int *p = &x;
+int **pp = &p;
+printf("%d %d %d\n", x, *p, **pp);
+@output
+7 7 7
+@end
+@text
+Each * follows one link. *pp follows pp once and gives you p itself. **pp follows twice and gives you x.
+@end
+@text
+That means you can change either level through pp. Assigning to *pp changes where p points. Assigning to **pp changes the value p points at.
+@end
+@code c
+int x = 1, y = 2;
+int *p = &x;
+int **pp = &p;
+*pp = &y;      // p now points at y
+**pp = 20;     // writes into y
+printf("%d %d %d\n", x, y, *p);
+@output
+1 20 20
+@end
+
+#---------------------------------------------------------------------------
+@page explain Changing the caller's pointer
+@text
+Remember the rule from passing by pointer: to let a function change a variable, pass the address of that variable. If the variable is itself a pointer, its address has type **.
+@end
+@code c
+void retarget(int **pp, int *to) {
+    *pp = to;
+}
+
+int main(void) {
+    int a = 1, b = 2;
+    int *p = &a;
+    retarget(&p, &b);
+    printf("%d\n", *p);
+    return 0;
+}
+@output
+2
+@end
+@text
+If retarget took a plain int *, the assignment would only change the function's copy of the pointer and the caller's p would still point at a.
+@end
+@text
+This pattern appears whenever a function must change which thing a pointer refers to, for example inserting at the front of a linked list, where the function must be able to change the caller's head pointer.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Two levels of pointer
+@code c
+int a = 1;
+int b = 2;
+int *p = &a;
+int **pp = &p;
+*pp = &b;
+**pp = 9;
+@end
+@step 1
+@cell a int 1 1000
+@note a is created and holds 1.
+@step 2
+@cell a int 1 1000
+@cell b int 2 1004
+@note b is created and holds 2.
+@step 3
+@cell a int 1 1000
+@cell b int 2 1004
+@cell p int* ->a 1008
+@note p points at a.
+@step 4
+@cell a int 1 1000
+@cell b int 2 1004
+@cell p int* ->a 1008
+@cell pp int** ->p 1016
+@note pp stores the address of p. It points at a pointer, not at an int.
+@step 5
+@cell a int 1 1000
+@cell b int 2 1004
+@cell p int* ->b 1008
+@cell pp int** ->p 1016
+@note *pp is p, so this stores the address of b in p. p changed, pp did not.
+@step 6
+@cell a int 1 1000
+@cell b int 9 1004
+@cell p int* ->b 1008
+@cell pp int** ->p 1016
+@note **pp follows pp to p and then p to b, so 9 is written into b.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int a = 5, b = 6;
+int *p = &a;
+int **pp = &p;
+**pp = 7;
+*pp = &b;
+**pp = 8;
+printf("%d %d\n", a, b);
+@output
+7 8
+@end
+@option 7 8
+@option 8 8
+@option 5 8
+@option 7 6
+@answer 1
+@why First **pp = 7 writes into a (p points at a). Then *pp = &b re-aims p at b, so the last **pp = 8 writes into b. a stays 7.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q If p has type int *, what is the type of &p?
+@opt int
+@opt int *
+@opt int **
+@opt int &
+@correct 3
+@why &p is the address of a pointer, which is a pointer to an int *, written int **.
+
+@q pp is an int ** that points at p. What is *pp?
+@opt The int that p points at
+@opt p itself
+@opt The address of pp
+@opt Always NULL
+@correct 2
+@why One * follows pp once and lands on p. A second * would follow p to the int.
+
+@q A function must change which node the caller's pointer head refers to. What should the parameter be?
+@opt Node head
+@opt Node *head
+@opt Node **head
+@opt const Node *head
+@correct 3
+@why To change a variable you pass its address. head is a Node *, so its address is a Node **.
+
+@q A function does  void make(int *p) { p = malloc(sizeof(int)); }  and the caller passes q. What does q hold afterwards?
+@opt The new block
+@opt Whatever it held before, and the block is leaked
+@opt NULL
+@opt The program refuses to compile
+@correct 2
+@why p is a copy of q. Only the copy was changed, and nothing keeps the new block reachable, so it leaks.
+
+@q With x = 3, p = &x and pp = &p, what does **pp read?
+@opt 3
+@opt The address of x
+@opt The address of p
+@opt The address of pp
+@correct 1
+@why The first * gets p, the second * follows p to x, whose value is 3.
