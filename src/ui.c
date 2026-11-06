@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <string.h>
+
 bool UiButtonClicked(Rectangle bounds)
 {
     return CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
@@ -103,41 +105,66 @@ float UiMeasureWrappedText(const char *text, float width, float fontSize)
     return WrapText(text, (Rectangle){ 0, 0, width, 0 }, fontSize, WHITE, false, false);
 }
 
-bool UiTextInputUpdate(char *buf, int size)
+//----------------------------------------------------------------------------------
+// Text box
+//----------------------------------------------------------------------------------
+static void AppendChar(char *buf, int bufSize, int c)
 {
     int len = (int)strlen(buf);
+    if (c >= 32 && c <= 126 && len < bufSize - 1)   // the default font only has plain ASCII
+    {
+        buf[len] = (char)c;
+        buf[len + 1] = '\0';
+    }
+}
 
+void UiTextBoxUpdate(char *buf, int bufSize)
+{
     int key = GetCharPressed();
     while (key > 0)
     {
-        if (key >= 32 && key <= 126 && len < size - 1)
-        {
-            buf[len++] = (char)key;
-            buf[len] = '\0';
-        }
+        AppendChar(buf, bufSize, key);
         key = GetCharPressed();
     }
 
+    int len = (int)strlen(buf);
     if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
 
-    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER);
+    bool ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+    if (ctrl && IsKeyPressed(KEY_V))
+    {
+        const char *clip = GetClipboardText();
+        if (clip != NULL) for (; *clip; clip++) AppendChar(buf, bufSize, (unsigned char)*clip);
+    }
 }
 
-void UiTextInputDraw(Rectangle bounds, const char *buf, bool active)
+void UiTextBoxDraw(Rectangle bounds, const char *label, const char *buf, bool active, bool masked)
 {
-    DrawRectangleRounded(bounds, 0.2f, 8, WHITE);
-    DrawRectangleLinesEx(bounds, 2.0f, active ? UI_ACCENT : UI_MUTED);
+    DrawTextEx(font, label, (Vector2){ bounds.x, bounds.y - 20 }, 16, 1.6f, UI_MUTED);
 
-    Vector2 size = MeasureTextEx(monoFont, buf, CODE_FONT_SIZE, 0);
-    Vector2 pos = { bounds.x + 12, bounds.y + (bounds.height - size.y)/2.0f };
-    if (buf[0] == '\0') size.y = (float)CODE_FONT_SIZE;
-    pos.y = bounds.y + (bounds.height - (float)CODE_FONT_SIZE)/2.0f;
+    DrawRectangleRec(bounds, WHITE);
+    DrawRectangleLinesEx(bounds, active ? 2.0f : 1.0f, active ? UI_ACCENT : (Color){ 200, 204, 216, 255 });
 
-    DrawTextEx(monoFont, buf, pos, CODE_FONT_SIZE, 0, UI_TEXT);
+    char shown[128];
+    int n = (int)strlen(buf);
+    if (n > (int)sizeof(shown) - 1) n = (int)sizeof(shown) - 1;
+    if (masked) memset(shown, '*', (size_t)n);
+    else memcpy(shown, buf, (size_t)n);
+    shown[n] = '\0';
+
+    const float size = 20.0f;
+    const float spacing = 2.0f;
+
+    // Long text scrolls: drop characters from the front until the end fits
+    const char *start = shown;
+    while (*start && MeasureTextEx(font, start, size, spacing).x > bounds.width - 24) start++;
+
+    Vector2 pos = { bounds.x + 10, bounds.y + (bounds.height - size)/2.0f };
+    DrawTextEx(font, start, pos, size, spacing, UI_TEXT);
 
     if (active && ((int)(GetTime()*2.0) % 2 == 0))
     {
-        float cx = pos.x + size.x + 2;
-        DrawRectangle((int)cx, (int)pos.y, 2, CODE_FONT_SIZE, UI_TEXT);
+        float w = MeasureTextEx(font, start, size, spacing).x;
+        DrawRectangle((int)(pos.x + w + 2), (int)pos.y, 2, (int)size, UI_TEXT);
     }
 }
