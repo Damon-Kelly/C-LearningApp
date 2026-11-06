@@ -10,16 +10,17 @@
 #include "raylib.h"
 #include "screens.h"
 #include "ui.h"
+#include "content.h"
 
 //----------------------------------------------------------------------------------
 // Shared Variables Definition (declared in screens.h)
 //----------------------------------------------------------------------------------
 GameScreen currentScreen = TITLE;
 Font font = { 0 };
+Font monoFont = { 0 };
 bool quitRequested = false;
+int selectedSection = 0;
 int selectedTopic = 0;
-int lastScore = 0;
-int lastTotal = 0;
 
 //----------------------------------------------------------------------------------
 // Module Variables
@@ -30,11 +31,10 @@ static const int screenHeight = 540;
 // Table of screens, indexed by GameScreen. To add a screen: add it to the enum
 // in screens.h, write its five functions, and add one line here.
 static const ScreenOps screens[SCREEN_COUNT] = {
-    [TITLE]   = { InitTitleScreen,   UpdateTitleScreen,   DrawTitleScreen,   UnloadTitleScreen,   FinishTitleScreen },
-    [TOPICS]  = { InitTopicsScreen,  UpdateTopicsScreen,  DrawTopicsScreen,  UnloadTopicsScreen,  FinishTopicsScreen },
-    [LESSON]  = { InitLessonScreen,  UpdateLessonScreen,  DrawLessonScreen,  UnloadLessonScreen,  FinishLessonScreen },
-    [QUIZ]    = { InitQuizScreen,    UpdateQuizScreen,    DrawQuizScreen,    UnloadQuizScreen,    FinishQuizScreen },
-    [RESULTS] = { InitResultsScreen, UpdateResultsScreen, DrawResultsScreen, UnloadResultsScreen, FinishResultsScreen },
+    [TITLE]    = { InitTitleScreen,    UpdateTitleScreen,    DrawTitleScreen,    UnloadTitleScreen,    FinishTitleScreen },
+    [SECTIONS] = { InitSectionsScreen, UpdateSectionsScreen, DrawSectionsScreen, UnloadSectionsScreen, FinishSectionsScreen },
+    [TOPICS]   = { InitTopicsScreen,   UpdateTopicsScreen,   DrawTopicsScreen,   UnloadTopicsScreen,   FinishTopicsScreen },
+    [LESSON]   = { InitLessonScreen,   UpdateLessonScreen,   DrawLessonScreen,   UnloadLessonScreen,   FinishLessonScreen },
 };
 
 // Fade transition state
@@ -48,6 +48,13 @@ static void TransitionToScreen(GameScreen screen);
 static void UpdateTransition(void);
 static void UpdateDrawFrame(void);
 
+// Resources are found next to the executable, so it works from any working directory.
+// (CMake copies src/resources there; the Makefile build runs from src/ directly.)
+const char *ResourcePath(const char *relativePath)
+{
+    return TextFormat("%sresources/%s", GetApplicationDirectory(), relativePath);
+}
+
 //----------------------------------------------------------------------------------
 // Program main entry point
 //----------------------------------------------------------------------------------
@@ -57,7 +64,13 @@ int main(void)
     SetExitKey(KEY_NULL);           // ESC is used for "back"; the window close button still quits
     SetTargetFPS(60);
 
-    font = GetFontDefault();        // TODO: load a nicer font from resources/
+    font = GetFontDefault();        // TODO: load a nicer UI font from resources/
+
+    // Monospace font for code. Falls back to raylib's default font if the file is missing.
+    monoFont = LoadFontEx(ResourcePath("DejaVuSansMono.ttf"), 18, NULL, 0);
+    SetTextureFilter(monoFont.texture, TEXTURE_FILTER_BILINEAR);
+
+    LoadManifest(ResourcePath("content/sections.txt"));     // errors are shown on the Sections screen
 
     currentScreen = TITLE;
     screens[currentScreen].init();
@@ -69,6 +82,7 @@ int main(void)
 
     screens[currentScreen].unload();
 
+    UnloadFont(monoFont);
     CloseWindow();
 
     return 0;

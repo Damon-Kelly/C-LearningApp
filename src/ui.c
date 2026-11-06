@@ -42,7 +42,8 @@ void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize
     DrawTextEx(font, text, (Vector2){ centerX - size.x/2.0f, y }, fontSize, spacing, color);
 }
 
-float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Color color)
+// Shared by drawing and measuring. clip=false ignores bounds.height.
+static float WrapText(const char *text, Rectangle bounds, float fontSize, Color color, bool draw, bool clip)
 {
     const float spacing = fontSize/10.0f;
     const float lineHeight = fontSize*1.4f;
@@ -80,11 +81,21 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
             width = MeasureTextEx(font, word, fontSize, spacing).x;
         }
 
-        if (y + lineHeight > bounds.y + bounds.height) break;   // out of room
+        if (clip && y + lineHeight > bounds.y + bounds.height) break;   // out of room
 
-        DrawTextEx(font, word, (Vector2){ x, y }, fontSize, spacing, color);
+        if (draw) DrawTextEx(font, word, (Vector2){ x, y }, fontSize, spacing, color);
         x += width + spacing;
     }
 
     return y + lineHeight;
+}
+
+float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Color color)
+{
+    return WrapText(text, bounds, fontSize, color, true, true);
+}
+
+float UiMeasureWrappedText(const char *text, float width, float fontSize)
+{
+    return WrapText(text, (Rectangle){ 0, 0, width, 0 }, fontSize, WHITE, false, false);
 }

@@ -34,7 +34,10 @@ void UiDrawHeader(const char *title);
 void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize, Color color);
 
 // Word-wrapped text inside bounds. Honors '\n' and leading spaces (for code samples).
-// Returns the y position just below the last drawn line.
+// Stops drawing when it runs out of height. Returns the y position just below the last line.
 float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Color color);
+
+// Height the text would take when wrapped to the given width (draws nothing)
+float UiMeasureWrappedText(const char *text, float width, float fontSize);
 
 #endif // UI_H

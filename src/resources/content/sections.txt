@@ -1,0 +1,19 @@
+# Sections and topics shown in the app.
+#
+#   @section Name | Short description
+#   @topic file.txt | Topic title | One-line summary        (belongs to the section above it)
+#
+# A section with no @topic lines shows as "Coming soon".
+
+@section Basics | Types, operators, casting and input/output
+
+@section Control flow | if/else, switch, loops and patterns
+
+@section Arrays and strings | Arrays, 2D arrays and strings
+
+@section Functions | Functions, pass by value and by reference
+
+@section Pointers and memory | Addresses, pointer arithmetic, dynamic memory
+@topic pointers_basics.txt | Pointers: & and * | What a pointer stores and how to follow it
+
+@section Linked lists and classes | Node-based lists, class lists and destructors

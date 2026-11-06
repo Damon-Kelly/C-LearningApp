@@ -19,10 +19,9 @@
 typedef enum GameScreen {
     UNKNOWN = -1,
     TITLE = 0,
+    SECTIONS,
     TOPICS,
     LESSON,
-    QUIZ,
-    RESULTS,
     SCREEN_COUNT
 } GameScreen;
 
@@ -39,11 +38,14 @@ typedef struct ScreenOps {
 // Global Variables Declaration (shared by several modules, defined in raylib_game.c)
 //----------------------------------------------------------------------------------
 extern GameScreen currentScreen;
-extern Font font;
+extern Font font;               // UI font (proportional)
+extern Font monoFont;           // Code font (monospace, 18px)
 extern bool quitRequested;      // Set to true to close the app
-extern int selectedTopic;       // Index of the topic chosen on the Topics screen
-extern int lastScore;           // Result of the most recent quiz
-extern int lastTotal;
+extern int selectedSection;     // Chosen on the Sections screen
+extern int selectedTopic;       // Index inside the chosen section
+
+// Full path of a file in the resources folder next to the executable
+const char *ResourcePath(const char *relativePath);
 
 //----------------------------------------------------------------------------------
 // Screen Functions Declaration
@@ -53,6 +55,12 @@ void UpdateTitleScreen(void);
 void DrawTitleScreen(void);
 void UnloadTitleScreen(void);
 GameScreen FinishTitleScreen(void);
+
+void InitSectionsScreen(void);
+void UpdateSectionsScreen(void);
+void DrawSectionsScreen(void);
+void UnloadSectionsScreen(void);
+GameScreen FinishSectionsScreen(void);
 
 void InitTopicsScreen(void);
 void UpdateTopicsScreen(void);
@@ -65,17 +73,5 @@ void UpdateLessonScreen(void);
 void DrawLessonScreen(void);
 void UnloadLessonScreen(void);
 GameScreen FinishLessonScreen(void);
-
-void InitQuizScreen(void);
-void UpdateQuizScreen(void);
-void DrawQuizScreen(void);
-void UnloadQuizScreen(void);
-GameScreen FinishQuizScreen(void);
-
-void InitResultsScreen(void);
-void UpdateResultsScreen(void);
-void DrawResultsScreen(void);
-void UnloadResultsScreen(void);
-GameScreen FinishResultsScreen(void);
 
 #endif // SCREENS_H

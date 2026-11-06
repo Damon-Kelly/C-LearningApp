@@ -1,0 +1,153 @@
+# Sample topic: shows every page type.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Pointers: & and *
+@summary What a pointer stores and how to follow it
+
+#---------------------------------------------------------------------------
+@page explain What is a pointer?
+@text
+Every variable lives somewhere in memory, and that place has an address. A pointer is a variable whose value is an address.
+@end
+@text
+Two operators do all the work. & gives you the address of a variable, and * follows a pointer to the value it points at.
+@end
+@code c
+int x = 42;
+int *p = &x;          // p stores the address of x
+printf("%d\n", x);
+printf("%d\n", *p);   // follow p to reach x
+@output
+42
+42
+@end
+@text
+Because *p is the variable x itself, assigning through the pointer changes x.
+@end
+@code c
+int x = 5;
+int *p = &x;
+*p = 9;
+printf("%d\n", x);
+@output
+9
+@end
+@text
+A pointer that points at nothing should be set to NULL. Checking for NULL is safe, but following a NULL pointer with * crashes the program.
+@end
+@code c
+int *p = NULL;
+if (p == NULL) {
+    printf("p points at nothing\n");
+}
+@output
+p points at nothing
+@end
+
+#---------------------------------------------------------------------------
+@page trace Follow the pointer
+@code c
+int a = 5;
+int b = 10;
+int *p;
+p = &a;
+*p = 3;
+p = &b;
+*p = -2;
+@end
+@step 1
+@cell a int 5 1000
+@note a is created and holds 5. It lives at address 1000.
+@step 2
+@cell a int 5 1000
+@cell b int 10 1004
+@note b is created next to it, at address 1004.
+@step 3
+@cell a int 5 1000
+@cell b int 10 1004
+@cell p int* ? 1008
+@note p is a pointer to an int. It has no value yet, so it holds garbage.
+@step 4
+@cell a int 5 1000
+@cell b int 10 1004
+@cell p int* ->a 1008
+@note p = &a stores the address of a (1000) in p. The arrow shows what p points at.
+@step 5
+@cell a int 3 1000
+@cell b int 10 1004
+@cell p int* ->a 1008
+@note *p = 3 follows p to a and writes 3 there. a changed; p did not.
+@step 6
+@cell a int 3 1000
+@cell b int 10 1004
+@cell p int* ->b 1008
+@note p = &b makes p point at b instead. Nothing was written to a or b.
+@step 7
+@cell a int 3 1000
+@cell b int -2 1004
+@cell p int* ->b 1008
+@note *p = -2 now writes through p into b. a keeps the 3 it already had.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int x = 10;
+int y = 20;
+int *p = &x;
+*p = y;
+y = 5;
+printf("%d %d\n", x, y);
+@output
+20 5
+@end
+@option 10 5
+@option 20 5
+@option 20 20
+@option 5 5
+@answer 2
+@why *p = y copies the value of y (20) into x. Changing y afterwards does not touch x, so x stays 20 and y is 5.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does the & operator give you in the expression &x ?
+@opt The address of x
+@opt The value stored in x
+@opt A new pointer variable called x
+@opt The result of comparing x with NULL
+@correct 1
+@why & gives the address of its operand. That address is what you store in a pointer.
+
+@q After  int a = 4; int *p = &a; *p = *p + 1;  what is the value of a?
+@opt 4
+@opt 5
+@opt The address of a
+@opt It will not compile
+@correct 2
+@why *p is a itself, so *p = *p + 1 reads a (4) and writes 5 back into a.
+
+@q In an expression (not a declaration), what does *p mean?
+@opt p multiplied by something
+@opt The value p points at
+@opt The address of p
+@opt A copy of p
+@correct 2
+@why In an expression, * in front of a pointer follows it to the thing it points at.
+
+@q Which of these is safe to do with a pointer p that is NULL?
+@opt Read the value with *p
+@opt Write a value with *p = 3
+@opt Check whether p == NULL
+@opt Add 1 to *p
+@correct 3
+@why Comparing a pointer is always safe. Following a NULL pointer with * is undefined behaviour and usually crashes.
+
+@q If x is an int, what is the type of the expression &x ?
+@opt int
+@opt int *
+@opt int **
+@opt char *
+@correct 2
+@why Taking the address of an int gives a pointer to an int, written int *.
