@@ -218,6 +218,42 @@ static void DrawChoice(const ExamQuestion *q)
 }
 
 //----------------------------------------------------------------------------------
+// Typed-answer text box (kept in this file so it cannot clash with other UI code)
+//----------------------------------------------------------------------------------
+// Edits buf with printable ASCII and backspace; returns true on the frame Enter is pressed.
+static bool ExamInputUpdate(char *buf, int size)
+{
+    int len = (int)strlen(buf);
+
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        if (key >= 32 && key <= 126 && len < size - 1)
+        {
+            buf[len++] = (char)key;
+            buf[len] = '\0';
+        }
+        key = GetCharPressed();
+    }
+
+    if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
+
+    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER);
+}
+
+static void ExamInputDraw(Rectangle bounds, const char *buf, bool active)
+{
+    DrawRectangleRounded(bounds, 0.2f, 8, WHITE);
+    DrawRectangleLinesEx(bounds, 2.0f, active ? UI_ACCENT : UI_MUTED);
+
+    Vector2 size = MeasureTextEx(monoFont, buf, CODE_FONT_SIZE, 0);
+    Vector2 pos = { bounds.x + 12, bounds.y + (bounds.height - (float)CODE_FONT_SIZE)/2.0f };
+    DrawTextEx(monoFont, buf, pos, CODE_FONT_SIZE, 0, UI_TEXT);
+
+    if (active && ((int)(GetTime()*2.0) % 2 == 0)) DrawRectangle((int)(pos.x + size.x + 2), (int)pos.y, 2, CODE_FONT_SIZE, UI_TEXT);
+}
+
+//----------------------------------------------------------------------------------
 // Typed answer
 //----------------------------------------------------------------------------------
 #define TYPED_CODE_WIDTH 470.0f
@@ -246,7 +282,7 @@ static void UpdateTyped(const ExamQuestion *q)
         return;
     }
 
-    bool enter = UiTextInputUpdate(typed, MAX_ANSWER_LEN);
+    bool enter = ExamInputUpdate(typed, MAX_ANSWER_LEN);
     if ((enter || UiButtonClicked(TypedSubmitRect(q))) && typed[0] != '\0')
     {
         RecordAnswer(ExamAnswerMatches(q, typed));
@@ -267,7 +303,7 @@ static void DrawTyped(const ExamQuestion *q)
 
     Rectangle input = TypedInputRect(q);
     Rectangle submit = TypedSubmitRect(q);
-    UiTextInputDraw(input, typed, !answered);
+    ExamInputDraw(input, typed, !answered);
     UiButtonDrawEx(submit, "Check", UI_ACCENT, !answered && typed[0] != '\0');
 
     if (input.y + input.height > bottom) bottom = input.y + input.height;
