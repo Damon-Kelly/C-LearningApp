@@ -34,14 +34,18 @@ PROJECT_VERSION       ?= 1.0
 PROJECT_BUILD_PATH    ?= .
 PROJECT_SOURCE_FILES  ?= \
     raylib_game.c \
-    screen_logo.c \
     screen_title.c \
-    screen_options.c \
-    screen_gameplay.c \
-    screen_ending.c
+    screen_sections.c \
+    screen_topics.c \
+    screen_lesson.c \
+    content.c \
+    ui.c \
+    users.c \
+    codepanel.c \
+    memview.c
 
 # raylib library variables
-RAYLIB_PATH           ?= C:\raylib\raylib
+RAYLIB_PATH           ?= C:/raylib/raylib
 RAYLIB_INCLUDE_PATH   ?= $(RAYLIB_PATH)/src
 RAYLIB_LIB_PATH       ?= $(RAYLIB_PATH)/src
 # Library type used for raylib: STATIC (.a) or SHARED (.so/.dll)
@@ -349,7 +353,7 @@ $(PROJECT_NAME): $(OBJS)
 clean:
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),WINDOWS)
-	del *.o *.exe /s
+	rm -f *.o *.exe
     endif
     ifeq ($(PLATFORM_OS),LINUX)
 	find . -type f -executable -delete
