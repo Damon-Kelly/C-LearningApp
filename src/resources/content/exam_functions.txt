@@ -1,0 +1,348 @@
+# Section exam for "Functions".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Functions exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q What does this program print?
+@code c
+int f(int a, int b) { return 2 * a + b; }
+
+int main(void) {
+    printf("%d\n", f(3, 4));
+}
+@end
+@opt 7
+@opt 10
+@opt 24
+@opt 14
+@correct 2
+@why f(3, 4) returns 2 * 3 + 4 = 10.
+
+@q Which return type do you give a function that returns nothing?
+@opt null
+@opt none
+@opt void
+@opt empty
+@correct 3
+@why void means the function gives back no value.
+
+@q What does this program print?
+@code c
+int tick(void) { static int n = 0; return ++n; }
+
+int main(void) {
+    tick(); tick();
+    printf("%d\n", tick());
+}
+@end
+@opt 1
+@opt 3
+@opt 2
+@opt 0
+@correct 2
+@why n is static, so it keeps its value between calls: 1, then 2, then 3 on the third call.
+
+@q What is the purpose of a function prototype?
+@opt It makes the function run faster
+@opt It frees the function's variables
+@opt It declares the name, parameters and return type before the definition appears
+@opt It turns the function into a global variable
+@correct 3
+@why The compiler needs to know how a function looks before it sees a call to it.
+
+@q What does this program print?
+@code c
+int x = 1;
+
+int main(void) {
+    int x = 5;
+    printf("%d\n", x);
+}
+@end
+@opt 1
+@opt 5
+@opt 6
+@opt compile error
+@correct 2
+@why The local x shadows the global x inside main.
+
+@q What does this program print?
+@code c
+int f(int n) {
+    if (n == 0) { return 1; }
+    return 2 * f(n - 1);
+}
+
+int main(void) {
+    printf("%d\n", f(4));
+}
+@end
+@opt 8
+@opt 16
+@opt 32
+@opt 4
+@correct 2
+@why f(4) doubles 1 four times: 2 * 2 * 2 * 2 * f(0) = 16.
+
+@q What is the job of the base case in a recursive function?
+@opt It makes the function faster
+@opt It declares the function
+@opt It counts how many calls were made
+@opt It stops the recursion by answering directly
+@correct 4
+@why Without a base case the function keeps calling itself until the stack overflows.
+
+@q What does this C++ program print?
+@code cpp
+void f(int &a, int b) { a = 5; b = 5; }
+
+int main() {
+    int x = 1, y = 3;
+    f(x, y);
+    cout << x << " " << y << endl;
+}
+@end
+@opt 5 3
+@opt 5 5
+@opt 1 3
+@opt 1 5
+@correct 1
+@why a is a reference to x, so x becomes 5. b is a copy of y, so y stays 3.
+
+@q Which pair of declarations is a valid overload in C++?
+@opt int f(int a);  and  double f(int a);
+@opt void f(int a);  and  void f(double a);
+@opt void f(int a);  and  void f(int b);
+@opt int f(int a);  and  int f(int a);
+@correct 2
+@why Overloads must differ in their parameter types or count. A different return type or parameter name is not enough.
+
+@q Which of these languages lets you write two functions with the same name and different parameters?
+@opt Only C
+@opt Both C and C++
+@opt Only C++
+@opt Neither
+@correct 3
+@why Overloading exists only in C++. In C every function name is unique.
+
+@q What does this program print?
+@code c
+void f(int *p) { p = NULL; }
+
+int main(void) {
+    int a = 5;
+    int *q = &a;
+    f(q);
+    printf("%d\n", q == NULL ? 0 : *q);
+}
+@end
+@opt 5
+@opt 0
+@opt nothing is printed
+@opt 6
+@correct 1
+@why The pointer itself is passed by value. Setting p to NULL changes only f's copy, so q still points at a.
+
+@q What does this C++ program print?
+@code cpp
+int add(int a, int b = 10) { return a + b; }
+
+int main() {
+    cout << add(1) << endl;
+}
+@end
+@opt 1
+@opt 10
+@opt 11
+@opt compile error
+@correct 3
+@why The call leaves out b, so it takes its default value 10. The result is 1 + 10.
+
+@q What happens to a normal local variable when its function returns?
+@opt It is destroyed
+@opt It keeps its value for the next call
+@opt It is visible to every function
+@opt It is set to 0 automatically
+@correct 1
+@why A local variable exists only while its function is running, unless it is declared static.
+
+#===========================================================================
+# Typed answers
+#===========================================================================
+@typed Fill in the blank so the function returns the larger of a and b.
+@code c
+int maxOf(int a, int b) {
+    return ____;
+}
+@end
+@accept a > b ? a : b
+@accept a >= b ? a : b
+@accept b > a ? b : a
+@accept b >= a ? b : a
+@accept a < b ? b : a
+@accept a <= b ? b : a
+@accept b < a ? a : b
+@test
+int main(void) { printf("%d %d\n", maxOf(3, 9), maxOf(7, 2)); return 0; }
+@expect
+9 7
+@end
+@why The conditional operator picks one of the two values: a > b ? a : b is a when a is larger, otherwise b.
+
+@typed Write a prototype for the function sum, which takes two ints and returns an int.
+@code c
+____
+
+int sum(int a, int b) {
+    return a + b;
+}
+@end
+@accept int sum(int a, int b);
+@accept int sum(int, int);
+@test
+int main(void) { printf("%d\n", sum(2, 3)); return 0; }
+@expect
+5
+@end
+@why A prototype is the first line of the definition followed by a semicolon. The parameter names may be left out.
+
+@typed Fill in the call so the program prints the sum of x and y.
+@code c
+int add(int a, int b) { return a + b; }
+
+int main(void) {
+    int x = 3, y = 4;
+    printf("%d\n", ____);
+}
+@end
+@accept add(x, y)
+@accept add(y, x)
+@test
+@expect
+7
+@end
+@why Pass the two variables as the arguments: add(x, y) returns 3 + 4.
+
+@typed Fill in the base case condition of this recursive factorial.
+@code c
+int fact(int n) {
+    if (____) {
+        return 1;
+    }
+    return n * fact(n - 1);
+}
+@end
+@accept n <= 1
+@accept n == 1
+@accept n < 2
+@accept n == 0
+@accept n <= 0
+@accept n < 1
+@test
+int main(void) { printf("%d\n", fact(5)); return 0; }
+@expect
+120
+@end
+@why The recursion must stop at the smallest input. For 1 (or 0) the answer is simply 1.
+
+@typed Fill in the keyword so the counter keeps its value between calls.
+@code c
+int next(void) {
+    ____ int n = 0;
+    n = n + 1;
+    return n;
+}
+@end
+@accept static
+@test
+int main(void) { next(); next(); printf("%d\n", next()); return 0; }
+@expect
+3
+@end
+@why A static local is created once and keeps its value between calls.
+
+@typed Fill in the parameter so that set can change the caller's int.
+@code c
+void set(____) {
+    *p = 9;
+}
+@end
+@accept int *p
+@accept int p[]
+@test
+int main(void) { int x = 0; set(&x); printf("%d\n", x); return 0; }
+@expect
+9
+@end
+@why To change the caller's variable the function needs its address, so the parameter is an int pointer.
+
+@typed Fill in the parameter so that inc changes the caller's variable (C++).
+@code cpp
+void inc(____) {
+    n = n + 1;
+}
+@end
+@accept int &n
+@test
+int main() { int x = 1; inc(x); cout << x << endl; return 0; }
+@expect
+2
+@end
+@why int &n makes n a reference, another name for the caller's variable.
+
+@typed Fill in the blank so that b defaults to 10 (C++).
+@code cpp
+int add(int a, int b ____) {
+    return a + b;
+}
+@end
+@accept = 10
+@test
+int main() { cout << add(5) << endl; return 0; }
+@expect
+15
+@end
+@why A default value is written with = after the parameter name.
+
+@typed Fill in the argument so the program prints 8.
+@code c
+void twice(int *p) { *p = *p * 2; }
+
+int main(void) {
+    int x = 4;
+    twice(____);
+    printf("%d\n", x);
+}
+@end
+@accept &x
+@test
+@expect
+8
+@end
+@why twice needs the address of x, and & gives it.
+
+@typed Fill in the recursive call so the function adds 1 + 2 + ... + n.
+@code c
+int sumTo(int n) {
+    if (n == 0) {
+        return 0;
+    }
+    return n + ____;
+}
+@end
+@accept sumTo(n - 1)
+@test
+int main(void) { printf("%d\n", sumTo(4)); return 0; }
+@expect
+10
+@end
+@why The recursive case adds n to the sum of everything below it, which is sumTo(n - 1).

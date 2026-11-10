@@ -1,0 +1,116 @@
+# Functions in C++: overloading and default arguments.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic C++ extras: overloading and defaults
+@summary Same-name functions and default argument values (C++ only)
+
+#---------------------------------------------------------------------------
+@page explain Overloading
+@text
+In C every function needs a unique name, which is why the library has abs for int and fabs for double. C++ allows overloading: several functions with the same name as long as their parameter lists differ. The compiler picks the right one from the arguments.
+@end
+@code cpp
+void show(int n) { cout << "int " << n << endl; }
+void show(double d) { cout << "double " << d << endl; }
+void show(const char *s) { cout << "string " << s << endl; }
+
+int main() {
+    show(5);
+    show(2.5);
+    show("hi");
+    return 0;
+}
+@output
+int 5
+double 2.5
+string hi
+@end
+@text
+Only the parameters count. Two functions that differ only in their return type are not valid overloads, because the compiler could not tell from a call which one you meant.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Default arguments
+@text
+A parameter can have a default value, written with = in the declaration. If the caller leaves that argument out, the default is used.
+@end
+@code cpp
+int power(int base, int exp = 2) {
+    int r = 1;
+    for (int i = 0; i < exp; i++) { r = r * base; }
+    return r;
+}
+
+int main() {
+    cout << power(5) << endl;
+    cout << power(2, 10) << endl;
+    return 0;
+}
+@output
+25
+1024
+@end
+@text
+power(5) uses exp = 2 and returns 25. power(2, 10) supplies both arguments. Parameters with defaults must come last in the list, because arguments are matched from left to right.
+@end
+@text
+Remember that neither feature exists in C. In C you would write separate functions with different names, or always pass every argument.
+@end
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this C++ program print?
+@end
+@code cpp
+void f(int n) { cout << "A"; }
+void f(double d) { cout << "B"; }
+void f(char c) { cout << "C"; }
+int main() {
+    f(1);
+    f(1.5);
+    f('x');
+}
+@output
+ABC
+@end
+@option AAC
+@option ABC
+@option ABA
+@option BBC
+@answer 2
+@why The compiler matches each argument's type: 1 is an int, 1.5 is a double, and 'x' is a char.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which language lets you define two functions with the same name but different parameters?
+@opt Only C++
+@opt Only C
+@opt Both C and C++
+@opt Neither
+@correct 1
+@why Overloading is a C++ feature. In C each function name must be unique.
+
+@q What does the compiler use to choose between overloaded functions?
+@opt The order they were written
+@opt The types and number of the arguments in the call
+@opt The return type
+@opt The name of the variable passed
+@correct 2
+@why The parameter lists must differ so a call is unambiguous.
+
+@q Given int add(int a, int b = 10), what does add(1) return?
+@opt 1
+@opt 10
+@opt 11
+@opt It does not compile
+@correct 3
+@why b is missing from the call, so it takes its default of 10, giving 1 + 10.
+
+@q Where must parameters with default values appear in the parameter list?
+@opt First
+@opt At the end
+@opt Anywhere
+@opt In the middle only
+@correct 2
+@why Arguments are matched left to right, so defaults must follow all the parameters that have none.

@@ -1,0 +1,185 @@
+# Functions: scope, globals and static locals.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Scope and lifetime
+@summary Local and global variables, shadowing and static
+
+#---------------------------------------------------------------------------
+@page explain Local variables
+@text
+A variable declared inside a function is local. It is created when the function is called, is visible only inside that function, and disappears when the function returns. Two functions can each have a variable called x without any clash.
+@end
+@code c
+void show(void) {
+    int x = 2;
+    printf("%d\n", x);
+}
+
+int main(void) {
+    int x = 1;
+    show();
+    printf("%d\n", x);
+    return 0;
+}
+@output
+2
+1
+@end
+@text
+Scope is not only about functions. A variable declared inside any pair of braces, such as a loop body, exists only until the closing brace.
+@end
+@code c
+for (int i = 0; i < 3; i++) {
+    int sq = i * i;
+    printf("%d\n", sq);
+}
+@output
+0
+1
+4
+@end
+@text
+Using sq or i after the loop would be a compile error, because they are out of scope.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Global variables and shadowing
+@text
+A variable declared outside every function is global. All functions below it can read and change it. A local variable with the same name hides the global one inside its block; this is called shadowing.
+@end
+@code c
+int x = 100;
+
+void bump(void) { x = x + 10; }
+void show(void) { printf("%d\n", x); }
+
+int main(void) {
+    int x = 6;
+    bump();
+    show();
+    printf("%d\n", x);
+    return 0;
+}
+@output
+110
+6
+@end
+@text
+bump and show use the global x, which became 110. main declares its own local x, so inside main the name x means 6 and the global is hidden.
+@end
+@text
+Globals are easy to reach but hard to track, because any function can change them. Prefer parameters and return values, and keep globals for the few things that really are program-wide.
+@end
+
+#---------------------------------------------------------------------------
+@page explain static locals
+@text
+Normally a local variable starts fresh on every call. Marking it static gives it a lifetime of the whole program: it is set up once, keeps its value between calls, but is still visible only inside its function.
+@end
+@code c
+int next(void) {
+    static int n = 0;
+    n = n + 1;
+    return n;
+}
+
+int main(void) {
+    printf("%d\n", next());
+    printf("%d\n", next());
+    printf("%d\n", next());
+    return 0;
+}
+@output
+1
+2
+3
+@end
+@text
+Without static the line int n = 0; would run on every call and the output would be 1, 1, 1. The initial value of a static is applied only once.
+@end
+
+#---------------------------------------------------------------------------
+@page trace A global changed by a function
+@code c
+int g = 0;
+void bump(void) {
+    g = g + 1;
+}
+int main(void) {
+    bump();
+    bump();
+}
+@end
+@step 1
+@cell g int 0 4000
+@note A global exists before main starts and lives in a fixed place, here at 4000.
+@step 3
+@cell g int 1 4000
+@note The first call to bump changed the global itself. bump has no variables of its own, and nothing was copied.
+@step 3
+@cell g int 2 4000
+@note The second call continues from the value the first call left behind, so g is now 2.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int next(void) {
+    static int n = 10;
+    n += 5;
+    return n;
+}
+int main(void) { next(); printf("%d\n", next()); }
+@output
+20
+@end
+@option 15
+@option 20
+@option 25
+@option 10
+@answer 2
+@why The static n is set to 10 only once. The first call makes it 15, the second call makes it 20 and returns that.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What happens to a normal local variable when its function returns?
+@opt It is destroyed
+@opt It keeps its value for the next call
+@opt It becomes a global variable
+@opt It is set to 0 automatically
+@correct 1
+@why Local variables exist only for the duration of the call.
+
+@q Where is a variable declared inside a for loop body visible?
+@opt Everywhere in the file
+@opt Anywhere in the same function
+@opt Only inside the loop body
+@opt Only in main
+@correct 3
+@why Scope ends at the closing brace of the block where the variable was declared.
+
+@q A global x exists and main declares its own int x. What does x mean inside main?
+@opt The global x
+@opt The local x
+@opt Both, added together
+@opt It is a compile error
+@correct 2
+@why The local variable shadows the global one inside its block.
+
+@q What does static do to a local variable?
+@opt Makes it constant
+@opt Makes it visible to all functions
+@opt Keeps its value between calls
+@opt Stores it on the screen
+@correct 3
+@why A static local is created once, lives for the whole program, and is still only visible inside its function.
+
+@q Why are many global variables a problem?
+@opt They use more memory than locals
+@opt Any function can change them, which makes bugs hard to track
+@opt They cannot hold numbers
+@opt They slow down printf
+@correct 2
+@why When anything can change a variable, it is hard to tell which code caused a wrong value.

@@ -19,6 +19,12 @@
 @exam exam_arrays.txt
 
 @section Functions | Functions, pass by value and by reference
+@topic functions_basics.txt | Functions: the basics | Defining and calling functions, return values and prototypes
+@topic functions_scope.txt | Scope and lifetime | Local and global variables, shadowing and static
+@topic functions_recursion.txt | Recursion | Functions that call themselves, base cases and the call stack
+@topic functions_passing.txt | Pass by value and by reference | Value, pointer and C++ reference parameters, and const
+@topic functions_cpp.txt | C++ extras: overloading and defaults | Same-name functions and default argument values
+@exam exam_functions.txt
 
 @section Pointers and memory | Addresses, pointer arithmetic, dynamic memory
 @topic pointers_basics.txt | Pointers: & and * | What a pointer stores and how to follow it

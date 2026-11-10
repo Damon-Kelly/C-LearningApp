@@ -1,0 +1,203 @@
+# Functions: recursion.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Recursion
+@summary Functions that call themselves, base cases and the call stack
+
+#---------------------------------------------------------------------------
+@page explain A function that calls itself
+@text
+A recursive function solves a problem by calling itself on a smaller version of the same problem. It needs two things: a base case that answers the smallest version directly, and a recursive case that moves toward it.
+@end
+@code c
+int fact(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * fact(n - 1);
+}
+
+int main(void) {
+    printf("%d\n", fact(5));
+    return 0;
+}
+@output
+120
+@end
+@text
+fact(5) is 5 * fact(4), which is 5 * 4 * fact(3), and so on until fact(1) returns 1 and the results multiply back up: 5 * 4 * 3 * 2 * 1 = 120.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Before or after the call
+@text
+Where you put a statement relative to the recursive call changes the order of the output. Printing before the call happens on the way down.
+@end
+@code c
+void down(int n) {
+    if (n == 0) { return; }
+    printf("%d\n", n);
+    down(n - 1);
+}
+
+int main(void) {
+    down(3);
+    return 0;
+}
+@output
+3
+2
+1
+@end
+@text
+Printing after the call happens on the way back up, once the deeper calls have finished. The order reverses.
+@end
+@code c
+void up(int n) {
+    if (n == 0) { return; }
+    up(n - 1);
+    printf("%d\n", n);
+}
+
+int main(void) {
+    up(3);
+    return 0;
+}
+@output
+1
+2
+3
+@end
+
+#---------------------------------------------------------------------------
+@page explain Costs and dangers
+@text
+Some problems are naturally recursive. The Fibonacci numbers are defined in terms of the two before them: 0, 1, 1, 2, 3, 5, 8, 13, ...
+@end
+@code c
+int fib(int n) {
+    if (n < 2) { return n; }
+    return fib(n - 1) + fib(n - 2);
+}
+
+int main(void) {
+    printf("%d\n", fib(7));
+    return 0;
+}
+@output
+13
+@end
+@text
+Every active call has its own variables on the call stack, and the stack is limited. A function with no base case, or one that never reaches it, keeps calling itself until the stack runs out and the program crashes (a stack overflow).
+@end
+@text
+This version of fib also repeats work: fib(5) computes fib(3) twice, and the waste grows quickly. Recursion is a good tool, but a loop is sometimes simpler and faster.
+@end
+
+#---------------------------------------------------------------------------
+@page trace The call stack for fact(3)
+@code c
+int fact(int n) {
+    if (n <= 1) return 1;
+    return n * fact(n - 1);
+}
+int main(void) {
+    int r = fact(3);
+    printf("%d\n", r);
+}
+@end
+@step 6
+@cell r int ? 1000
+@note main calls fact(3). r waits for the answer.
+@step 3
+@cell r int ? 1000
+@cell n(3) int 3 960
+@note The first call has its own n = 3. It is not 1 yet, so it calls fact(2) and waits.
+@step 3
+@cell r int ? 1000
+@cell n(3) int 3 960
+@cell n(2) int 2 928
+@note The second call has a separate n = 2. It calls fact(1). Every call stacks a new frame on top.
+@step 2
+@cell r int ? 1000
+@cell n(3) int 3 960
+@cell n(2) int 2 928
+@cell n(1) int 1 896
+@note The third call has n = 1, which is the base case. It returns 1 without calling again.
+@step 3
+@cell r int ? 1000
+@cell n(3) int 3 960
+@cell n(2) int 2 928
+@note The frame for n = 1 is gone. The second call now computes 2 * 1 = 2 and returns it.
+@step 3
+@cell r int ? 1000
+@cell n(3) int 3 960
+@note The first call computes 3 * 2 = 6 and returns it.
+@step 6
+@cell r int 6 1000
+@note All frames are gone. r receives 6.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int f(int n) {
+    if (n == 0) {
+        return 0;
+    }
+    return n + f(n - 1);
+}
+int main(void) { printf("%d\n", f(4)); }
+@output
+10
+@end
+@option 4
+@option 24
+@option 10
+@option 0
+@answer 3
+@why f(4) = 4 + f(3) = 4 + 3 + f(2) = 4 + 3 + 2 + f(1) = 4 + 3 + 2 + 1 + f(0) = 10. It adds the numbers from n down to 1.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What is the base case of a recursive function?
+@opt The first call made from main
+@opt The input for which it answers directly without calling itself
+@opt The line that calls itself
+@opt The variable that stores the result
+@correct 2
+@why Without a base case there is nothing to stop the chain of calls.
+
+@q What usually happens if a recursive function never reaches its base case?
+@opt It returns 0
+@opt It stops after 100 calls
+@opt The stack runs out and the program crashes
+@opt The compiler fixes it
+@correct 3
+@why Each call uses stack memory. With no end, the stack overflows.
+
+@q In down(3) from this lesson, where is printf placed relative to the recursive call?
+@opt Before it, so it prints on the way down
+@opt After it, so it prints on the way back up
+@opt Inside the base case
+@opt In main
+@correct 1
+@why Printing before the call gives 3 2 1. Moving it after the call would give 1 2 3.
+
+@q How many separate n variables exist at the deepest point of fact(3)?
+@opt 1
+@opt 2
+@opt 3
+@opt 6
+@correct 3
+@why Each active call has its own n. The calls for 3, 2 and 1 are all waiting or running at that moment.
+
+@q Which of these is a good use of recursion?
+@opt Processing something defined in terms of smaller copies of itself
+@opt Any task, because it is always faster than a loop
+@opt Avoiding the need for a base case
+@opt Saving memory
+@correct 1
+@why Recursion fits problems that split into smaller versions of themselves. It is not automatically faster and it uses stack memory.
