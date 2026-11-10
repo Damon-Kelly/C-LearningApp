@@ -1,0 +1,185 @@
+# Functions: defining, calling, returning, prototypes.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Functions: the basics
+@summary Defining and calling functions, return values and prototypes
+
+#---------------------------------------------------------------------------
+@page explain Defining and calling a function
+@text
+A function is a named block of code you can run whenever you need it. A definition has four parts: the return type, the name, the parameters in parentheses, and the body in braces.
+@end
+@code c
+int square(int x) {
+    return x * x;
+}
+
+int main(void) {
+    int r = square(4);
+    printf("%d\n", r);
+    return 0;
+}
+@output
+16
+@end
+@text
+Calling square(4) copies 4 into the parameter x, runs the body, and return sends the result back to the place of the call. Here that result is stored in r.
+@end
+@text
+A function that has nothing to give back uses the return type void. It is called just for what it does, such as printing.
+@end
+@code c
+void greet(char name[]) {
+    printf("Hello, %s!\n", name);
+}
+
+int main(void) {
+    greet("Ana");
+    return 0;
+}
+@output
+Hello, Ana!
+@end
+
+#---------------------------------------------------------------------------
+@page explain Return and early exit
+@text
+return ends the function immediately, even in the middle of the body. Code after it in that call never runs. This makes early exits easy to write.
+@end
+@code c
+int absval(int n) {
+    if (n < 0) {
+        return -n;
+    }
+    return n;
+}
+
+int main(void) {
+    printf("%d %d\n", absval(-7), absval(3));
+    return 0;
+}
+@output
+7 3
+@end
+@text
+A void function can also use a bare return; to stop early. A function with a non-void type should return a value on every path, otherwise the caller receives garbage.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Prototypes: declare before use
+@text
+The compiler reads a file from top to bottom, so a function must be known before it is called. If you want main first, add a prototype: the function's first line followed by a semicolon, with no body.
+@end
+@code c
+int twice(int n);
+
+int main(void) {
+    printf("%d\n", twice(21));
+    return 0;
+}
+
+int twice(int n) {
+    return n * 2;
+}
+@output
+42
+@end
+@text
+The prototype tells the compiler the name, the parameter types and the return type. The real definition can then appear anywhere later. Parameter names are optional in a prototype, so int twice(int); is also valid.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Following a call
+@code c
+int add(int a, int b) {
+    int s = a + b;
+    return s;
+}
+int main(void) {
+    int r = add(2, 3);
+    printf("%d\n", r);
+}
+@end
+@step 6
+@cell r int ? 1000
+@note main is running. The call add(2, 3) is about to start, so r has no value yet.
+@step 2
+@cell r int ? 1000
+@cell a int 2 960
+@cell b int 3 964
+@cell s int 5 968
+@note The call created new variables a and b holding copies of 2 and 3. s = a + b stored 5 in s.
+@step 3
+@cell r int ? 1000
+@cell a int 2 960
+@cell b int 3 964
+@cell s int 5 968
+@note return s sends the value 5 back to the caller. The function is finished.
+@step 6
+@cell r int 5 1000
+@note Back in main, r receives 5. The function's variables a, b and s no longer exist.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int f(int n) { n = n * 2; return n + 1; }
+
+int main(void) {
+    int n = 5;
+    int r = f(n);
+    printf("%d %d\n", r, n);
+}
+@output
+11 5
+@end
+@option 11 11
+@option 11 5
+@option 5 5
+@option 10 5
+@answer 2
+@why f works on a copy of n. Inside f the copy becomes 10 and the result is 11, so r is 11. main's own n is untouched and still 5.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What are the four parts of a function definition?
+@opt Return type, name, parameters, body
+@opt Name, loop, condition, body
+@opt Type, value, address, size
+@opt Prototype, call, return, exit
+@correct 1
+@why For example int square(int x) { return x * x; } has return type int, name square, parameter int x and a body.
+
+@q What return type do you give a function that returns nothing?
+@opt null
+@opt void
+@opt none
+@opt empty
+@correct 2
+@why void means no value is returned.
+
+@q What happens to the statements that come after a return in the same call?
+@opt They still run
+@opt They run once the caller finishes
+@opt They never run
+@opt The compiler reports an error
+@correct 3
+@why return ends the function at once and control goes back to the caller.
+
+@q Why would you write int twice(int n); above main?
+@opt To make the function run faster
+@opt To tell the compiler about the function before it is called
+@opt To make the function global
+@opt To free the memory used by n
+@correct 2
+@why A prototype declares the name, parameters and return type so the definition can come later in the file.
+
+@q What does a function receive when you call f(x) with an int variable x?
+@opt The variable x itself
+@opt The address of x
+@opt A copy of the value of x
+@opt The name of x
+@correct 3
+@why Arguments are passed by value, so the parameter is a separate copy.
