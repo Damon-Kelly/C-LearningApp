@@ -1,0 +1,353 @@
+# Section exam for "Control flow".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Control flow exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q What does this program print?
+@code c
+int x = 10;
+if (x > 5) { printf("A"); }
+else if (x > 8) { printf("B"); }
+else { printf("C"); }
+printf("\n");
+@end
+@opt A
+@opt AB
+@opt B
+@opt C
+@correct 1
+@why The first true condition runs and the rest of the chain is skipped, so only A is printed.
+
+@q What does this program print?
+@code c
+int a = 0, b = 1;
+if (a)
+    if (b) printf("X\n");
+    else printf("Y\n");
+printf("Z\n");
+@end
+@opt X
+@opt Y
+@opt Z
+@opt Y and Z
+@correct 3
+@why a is false, so the inner if is never reached. The else belongs to the inner if, so Y is not printed either. Only Z prints.
+
+@q What does this program print?
+@code c
+int n = 2, r = 0;
+switch (n) {
+    case 1: r += 1;
+    case 2: r += 2;
+    case 3: r += 3; break;
+    default: r += 9;
+}
+printf("%d\n", r);
+@end
+@opt 2
+@opt 5
+@opt 6
+@opt 14
+@correct 2
+@why It jumps to case 2 (adds 2), falls into case 3 (adds 3), and break stops there.
+
+@q Which of these cannot be used as the value of a switch in C?
+@opt int
+@opt char
+@opt double
+@opt an enum
+@correct 3
+@why switch works on integer types only.
+
+@q What does this program print?
+@code c
+int n = 10;
+do { n++; } while (n < 5);
+printf("%d\n", n);
+@end
+@opt 10
+@opt 11
+@opt 5
+@opt 4
+@correct 2
+@why The body runs once before the condition is checked, so n becomes 11.
+
+@q What does this program print?
+@code c
+int s = 0;
+for (int i = 1; i <= 4; i++) { s += i * i; }
+printf("%d\n", s);
+@end
+@opt 10
+@opt 16
+@opt 30
+@opt 20
+@correct 3
+@why 1 + 4 + 9 + 16 is 30.
+
+@q What does this program print?
+@code c
+int c = 0;
+for (int i = 1; i <= 5; i++) {
+    if (i % 2 == 0) { continue; }
+    c += i;
+}
+printf("%d\n", c);
+@end
+@opt 6
+@opt 9
+@opt 15
+@opt 5
+@correct 2
+@why continue skips the even numbers, so only 1, 3 and 5 are added.
+
+@q What does this program print?
+@code c
+int c = 0;
+for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+        if (j == 1) { break; }
+        c++;
+    }
+}
+printf("%d\n", c);
+@end
+@opt 0
+@opt 3
+@opt 6
+@opt 9
+@correct 2
+@why break leaves only the inner loop. For each of the 3 outer passes, c++ runs once (j = 0) before j = 1 stops it.
+
+@q What does this program print?
+@code c
+int c = 0;
+for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 2; j++)
+        c++;
+printf("%d\n", c);
+@end
+@opt 6
+@opt 8
+@opt 4
+@opt 2
+@correct 2
+@why The inner loop runs 2 times for each of the 4 outer passes: 4 * 2 = 8.
+
+@q What does this program print?
+@code c
+int a = 4;
+printf("%d\n", a % 2 == 0 ? a / 2 : a * 3 + 1);
+@end
+@opt 2
+@opt 13
+@opt 4
+@opt 1
+@correct 1
+@why a is even, so the value before the colon is used: 4 / 2 is 2.
+
+@q What is wrong with the statement if (x = 5)?
+@opt Nothing, it tests whether x is 5
+@opt It assigns 5 to x, so the condition is always true
+@opt It does not compile in C
+@opt It only works for chars
+@correct 2
+@why A single = assigns. Comparison needs ==.
+
+@q A while loop tests i <= 3 but the body never changes i. What happens?
+@opt It runs 3 times
+@opt It does not run
+@opt It runs forever
+@opt The compiler reports an error
+@correct 3
+@why The condition never becomes false, so the loop never ends.
+
+@q What does this program print?
+@code c
+int n = 702, s = 0;
+while (n > 0) { s += n % 10; n /= 10; }
+printf("%d\n", s);
+@end
+@opt 9
+@opt 702
+@opt 7
+@opt 11
+@correct 1
+@why The digits are 2, 0 and 7, and 2 + 0 + 7 is 9.
+
+#===========================================================================
+# Typed answers
+#===========================================================================
+@typed Fill in the condition so the program prints even.
+@code c
+int n = 8;
+if (____) {
+    printf("even\n");
+}
+@end
+@accept n % 2 == 0
+@accept 0 == n % 2
+@accept !(n % 2)
+@accept n % 2 != 1
+@test
+@expect
+even
+@end
+@why An even number leaves remainder 0 when divided by 2.
+
+@typed Fill in the keyword that stops the loop when i is 3.
+@code c
+for (int i = 0; i < 10; i++) {
+    if (i == 3) { ____; }
+    printf("%d\n", i);
+}
+@end
+@accept break
+@test
+@expect
+0
+1
+2
+@end
+@why break leaves the loop immediately.
+
+@typed Fill in the keyword so the loop skips printing 1.
+@code c
+for (int i = 0; i < 3; i++) {
+    if (i == 1) { ____; }
+    printf("%d\n", i);
+}
+@end
+@accept continue
+@test
+@expect
+0
+2
+@end
+@why continue jumps to the next pass without running the rest of the body.
+
+@typed Write the for loop header that prints the numbers 1 to 5.
+@code c
+____ {
+    printf("%d\n", i);
+}
+@end
+@accept for (int i = 1; i <= 5; i++)
+@accept for (int i = 1; i < 6; i++)
+@accept for (int i = 1; i <= 5; ++i)
+@accept for (int i = 1; i <= 5; i += 1)
+@accept for (int i = 1; i <= 5; i = i + 1)
+@test
+@expect
+1
+2
+3
+4
+5
+@end
+@why Start at 1, continue while i is at most 5, and add 1 each pass.
+
+@typed Fill in the case label so the program prints two.
+@code c
+int x = 2;
+switch (x) {
+    ____ printf("two\n"); break;
+    default: printf("other\n");
+}
+@end
+@accept case 2:
+@test
+@expect
+two
+@end
+@why A case label is the word case, the constant, and a colon.
+
+@typed Fill in the keyword that ends the do-while loop.
+@code c
+int n = 0;
+do {
+    n++;
+} ____ (n < 3);
+printf("%d\n", n);
+@end
+@accept while
+@test
+@expect
+3
+@end
+@why A do-while ends with while and the condition, followed by a semicolon.
+
+@typed Fill in the statement that adds i to sum.
+@code c
+int sum = 0;
+for (int i = 1; i <= 4; i++) {
+    ____
+}
+printf("%d\n", sum);
+@end
+@accept sum += i;
+@accept sum = sum + i;
+@accept sum = i + sum;
+@test
+@expect
+10
+@end
+@why An accumulator is updated with the loop counter on every pass.
+
+@typed Fill in the expression so m is the larger of a and b.
+@code c
+int a = 3, b = 9;
+int m = ____;
+printf("%d\n", m);
+@end
+@accept a > b ? a : b
+@accept b > a ? b : a
+@accept a < b ? b : a
+@accept b < a ? a : b
+@test
+@expect
+9
+@end
+@why The ternary operator picks one of two values based on the comparison.
+
+@typed Fill in the expression that gives the last digit of n.
+@code c
+int n = 4821;
+int last = ____;
+printf("%d\n", last);
+@end
+@accept n % 10
+@test
+@expect
+1
+@end
+@why The remainder after dividing by 10 is the units digit.
+
+@typed Fill in the inner loop condition so row r prints r stars.
+@code c
+for (int r = 1; r <= 3; r++) {
+    for (int c = 1; ____; c++) {
+        printf("*");
+    }
+    printf("\n");
+}
+@end
+@accept c <= r
+@accept r >= c
+@accept c < r + 1
+@test
+@expect
+*
+**
+***
+@end
+@why Row r should print r stars, so the inner counter runs from 1 up to r.

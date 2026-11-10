@@ -1,0 +1,178 @@
+# Control flow: if, else and conditions.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Making decisions with if
+@summary if, else if, else, truthiness and the ternary operator
+
+#---------------------------------------------------------------------------
+@page explain if, else if, else
+@text
+An if statement runs a block only when its condition is true. Add else if for more cases and else for everything left over. The conditions are tested from top to bottom, the first true one runs, and all the rest are skipped.
+@end
+@code c
+int temp = 25;
+if (temp > 30) {
+    printf("hot\n");
+} else if (temp > 20) {
+    printf("warm\n");
+} else {
+    printf("cold\n");
+}
+@output
+warm
+@end
+@text
+temp > 30 is false, temp > 20 is true, so "warm" is printed and the else is never looked at. Order matters: if you tested temp > 20 first, 35 would be called "warm" instead of "hot".
+@end
+@text
+Always use braces, even for a single statement. Without them only the next line belongs to the if, and adding a second line later silently changes the meaning.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Conditions and common traps
+@text
+A condition is any expression. Zero counts as false and every other value counts as true, so a variable can be used as a condition directly.
+@end
+@code c
+int x = 0;
+if (x) {
+    printf("true\n");
+} else {
+    printf("false\n");
+}
+@output
+false
+@end
+@text
+Two traps to remember. A semicolon right after the parentheses, if (x > 3); , ends the if with an empty statement, so the block below always runs. And if (x = 5) assigns instead of comparing, and is always true.
+@end
+@text
+Without braces, an else belongs to the nearest if above it, whatever the indentation suggests.
+@end
+@code c
+int a = 1, b = 0;
+if (a)
+    if (b)
+        printf("A\n");
+    else
+        printf("B\n");
+@output
+B
+@end
+@text
+Here a is true, so the inner if is reached. b is false, so its else runs and prints B. Braces make this kind of confusion impossible.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Ranges and the ternary operator
+@text
+To test that a value lies in a range, write two comparisons joined with &&. Writing 18 <= age < 65 does not work the way it looks.
+@end
+@code c
+int age = 20;
+if (age >= 18 && age < 65) {
+    printf("adult\n");
+}
+@output
+adult
+@end
+@text
+For a simple choice between two values, the ternary operator condition ? a : b is a short form of if/else that produces a value.
+@end
+@code c
+int n = 7;
+printf("%s\n", n % 2 == 0 ? "even" : "odd");
+@output
+odd
+@end
+
+#---------------------------------------------------------------------------
+@page trace Which branch runs?
+@code c
+int score = 72;
+char grade;
+if (score >= 90) grade = 'A';
+else if (score >= 70) grade = 'B';
+else grade = 'C';
+@end
+@step 1
+@cell score int 72 1000
+@note score holds 72.
+@step 2
+@cell score int 72 1000
+@cell grade char ? 1004
+@note grade is declared but has no value yet.
+@step 3
+@cell score int 72 1000
+@cell grade char ? 1004
+@note 72 >= 90 is false, so grade = 'A' is skipped. The next test is made.
+@step 4
+@cell score int 72 1000
+@cell grade char 'B' 1004
+@note 72 >= 70 is true, so grade becomes 'B'. The final else is skipped without being tested.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int x = 5;
+if (x > 3)
+    printf("A");
+if (x > 4)
+    printf("B");
+else
+    printf("C");
+printf("\n");
+@output
+AB
+@end
+@option A
+@option ABC
+@option AB
+@option AC
+@answer 3
+@why These are two separate if statements. The first prints A. In the second, x > 4 is true, so B is printed and the else is skipped.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q In an if / else if / else chain, how many branches run?
+@opt All that are true
+@opt At most one: the first true one
+@opt Always exactly two
+@opt Only the else
+@correct 2
+@why The chain stops at the first true condition. If none is true, the else runs.
+
+@q What does if (x) mean when x is an int?
+@opt True when x is not zero
+@opt True when x is positive
+@opt True when x is 1
+@opt It is a compile error
+@correct 1
+@why In C, zero is false and every other value is true.
+
+@q What is wrong with if (x = 5)?
+@opt Nothing, it tests whether x is 5
+@opt It assigns 5 to x, and the condition is always true
+@opt It does not compile
+@opt It only works for chars
+@correct 2
+@why A single = assigns. Use == to compare.
+
+@q Which condition tests that n is between 1 and 9, inclusive?
+@opt 1 <= n <= 9
+@opt n >= 1 || n <= 9
+@opt n >= 1 && n <= 9
+@opt n > 1 && n < 9
+@correct 3
+@why Both comparisons must be true, so join them with &&. The || version is true for every number.
+
+@q What does n % 2 == 0 ? "even" : "odd" produce for n = 7?
+@opt "even"
+@opt "odd"
+@opt 0
+@opt 7
+@correct 2
+@why 7 % 2 is 1, so the test is false and the value after the colon is chosen.
