@@ -88,6 +88,7 @@ void DrawTopicsScreen(void)
     if (section == NULL) return;
 
     UiDrawHeader(section->name);
+    UiDrawLoggedInAs();
 
     UiBeginScissor((Rectangle){ 0, LIST_TOP, GAME_WIDTH, LIST_BOTTOM - LIST_TOP });
 

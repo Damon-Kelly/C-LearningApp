@@ -5,12 +5,14 @@
 
 static GameScreen finishScreen = UNKNOWN;
 
-static const Rectangle backButton = { 60, 480, 140, 40 };
+static const Rectangle backButton     = { 60, 480, 140, 40 };       // acts as "Log out"
+static const Rectangle profileButton  = { 640, 480, 120, 40 };
+static const Rectangle settingsButton = { 780, 480, 120, 40 };
 
 // Two columns of cards: with 6 sections that is 3 rows
 static Rectangle CardRect(int i)
 {
-    return (Rectangle){ 60.0f + (i % 2)*430.0f, 100.0f + (i / 2)*124.0f, 410, 112 };
+    return (Rectangle){ 60.0f + (i % 2)*430.0f, 110.0f + (i / 2)*124.0f, 410, 112 };
 }
 
 void InitSectionsScreen(void)
@@ -30,12 +32,17 @@ void UpdateSectionsScreen(void)
         }
     }
 
+    if (UiButtonClicked(profileButton)) finishScreen = PROFILE;
+    if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
+
+    // Going back to the title screen logs the user out
     if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TITLE;
 }
 
 void DrawSectionsScreen(void)
 {
     UiDrawHeader("Sections");
+    UiDrawLoggedInAs();
 
     if (GetContentError()[0] != '\0')
     {
@@ -61,7 +68,9 @@ void DrawSectionsScreen(void)
         UiText(status, (Vector2){ r.x + 16, r.y + r.height - 24 }, 16, available ? UI_ACCENT : UI_MUTED);
     }
 
-    UiButtonDrawEx(backButton, "Back", UI_MUTED, true);
+    UiButtonDrawEx(backButton, "Log out", UI_MUTED, true);
+    UiButtonDraw(profileButton, "Profile");
+    UiButtonDraw(settingsButton, "Settings");
 }
 
 void UnloadSectionsScreen(void)

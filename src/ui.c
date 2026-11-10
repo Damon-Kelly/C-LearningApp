@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "screens.h"    // for the shared fonts
 #include "codepanel.h"  // CODE_FONT_SIZE
+#include "users.h"      // GetCurrentUser
 
 #include <string.h>
 
@@ -54,6 +55,13 @@ void UiDrawHeader(const char *title)
 {
     UiText(title, (Vector2){ 60, 30 }, 36, UI_TEXT);
     DrawRectangle(60, 78, 840, 3, UI_ACCENT);
+}
+
+void UiDrawLoggedInAs(void)
+{
+    const char *name = GetCurrentUser();
+    if (name[0] == '\0') return;
+    UiText(TextFormat("Logged in as %s", name), (Vector2){ 60, 86 }, 16, UI_MUTED);
 }
 
 void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize, Color color)

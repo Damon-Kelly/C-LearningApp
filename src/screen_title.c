@@ -15,6 +15,7 @@ static bool signUpMode = false;             // false: log in, true: create accou
 static char fields[MAX_FIELDS][FIELD_LEN];
 static int active = 0;                      // field that has keyboard focus
 static char message[128];                   // last error, shown in red
+static char notice[128] = "";               // message from another screen, shown in green
 
 static const Rectangle quitButton = { 60, 490, 100, 36 };
 
@@ -22,6 +23,11 @@ static const Rectangle quitButton = { 60, 490, 100, 36 };
 // Sign up: 0 = name, 1 = email, 2 = password, 3 = confirm password
 static const char *loginLabels[2]  = { "Name or email", "Password" };
 static const char *signUpLabels[4] = { "Name", "Email", "Password", "Confirm password" };
+
+void SetTitleNotice(const char *text)
+{
+    snprintf(notice, sizeof(notice), "%s", text);
+}
 
 static int FieldCount(void) { return signUpMode ? 4 : 2; }
 
@@ -51,6 +57,8 @@ static void Submit(void)
 {
     char err[128] = "";
     bool ok;
+
+    notice[0] = '\0';
 
     if (signUpMode)
     {
@@ -99,6 +107,7 @@ void UpdateTitleScreen(void)
     {
         signUpMode = !signUpMode;
         message[0] = '\0';
+        notice[0] = '\0';
         ClearFields();
     }
 
@@ -119,6 +128,7 @@ void DrawTitleScreen(void)
     }
 
     if (message[0] != '\0') UiDrawTextCentered(message, cx, FieldsEnd() + 8, 16, UI_BAD);
+    else if (notice[0] != '\0') UiDrawTextCentered(notice, cx, FieldsEnd() + 8, 16, UI_GOOD);
 
     UiButtonDraw(SubmitRect(), signUpMode ? "Create account" : "Log in");
     UiButtonDrawEx(ToggleRect(), signUpMode ? "I already have an account" : "Create an account", UI_MUTED, true);

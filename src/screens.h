@@ -28,6 +28,8 @@ typedef enum GameScreen {
     TOPICS,
     LESSON,
     EXAM,
+    PROFILE,
+    SETTINGS,
     SCREEN_COUNT
 } GameScreen;
 
@@ -54,6 +56,10 @@ extern Vector2 uiOffset;        // Where the canvas starts inside the window
 
 // Full path of a file in the resources folder next to the executable
 const char *ResourcePath(const char *relativePath);
+
+// A short green message shown on the title screen (for example "Your account was deleted.").
+// It stays until the user logs in, signs up or switches form.
+void SetTitleNotice(const char *text);
 
 //----------------------------------------------------------------------------------
 // Screen Functions Declaration
@@ -87,5 +93,17 @@ void UpdateExamScreen(void);
 void DrawExamScreen(void);
 void UnloadExamScreen(void);
 GameScreen FinishExamScreen(void);
+
+void InitProfileScreen(void);
+void UpdateProfileScreen(void);
+void DrawProfileScreen(void);
+void UnloadProfileScreen(void);
+GameScreen FinishProfileScreen(void);
+
+void InitSettingsScreen(void);
+void UpdateSettingsScreen(void);
+void DrawSettingsScreen(void);
+void UnloadSettingsScreen(void);
+GameScreen FinishSettingsScreen(void);
 
 #endif // SCREENS_H

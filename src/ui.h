@@ -46,6 +46,10 @@ void UiButtonDrawEx(Rectangle bounds, const char *text, Color fill, bool enabled
 // Screen title at the top-left with an accent underline
 void UiDrawHeader(const char *title);
 
+// "Logged in as <name>" in small muted text just under the header line. Draws nothing when
+// nobody is logged in.
+void UiDrawLoggedInAs(void);
+
 // Text centered horizontally around centerX
 void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize, Color color);
 
