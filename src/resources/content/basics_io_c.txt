@@ -1,0 +1,174 @@
+# Basics: input and output in C.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Input and output in C
+@summary printf format specifiers and reading input with scanf
+
+#---------------------------------------------------------------------------
+@page explain printf and format specifiers
+@text
+printf prints a template string. Each % in the template is a placeholder that is filled from the arguments that follow, in order. The letter after the % must match the type: %d for int, %f for double, %c for char, %s for a string, and %% for a real percent sign.
+@end
+@code c
+int n = 42;
+double x = 3.14159;
+char c = 'Z';
+printf("%d %f %c\n", n, x, c);
+printf("%.2f\n", x);
+@output
+42 3.141590 Z
+3.14
+@end
+@text
+%f shows six decimals by default. %.2f asks for two. A number before the letter sets a minimum width, a 0 pads with zeros, and a minus sign aligns to the left.
+@end
+@code c
+int n = 42;
+printf("%05d|%-5d|\n", n, n);
+printf("%s has %d letters, %d%% done\n", "hello", 5, 50);
+@output
+00042|42   |
+hello has 5 letters, 50% done
+@end
+@text
+Escape sequences inside the template: \n is a new line, \t a tab, and \" a double quote. If a specifier does not match the argument's type, the output is garbage, so check them carefully.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Reading numbers with scanf
+@text
+scanf is the reverse of printf. Its template says what to read, and the arguments say where to store it. Because scanf has to change your variables, you pass their addresses with &.
+@end
+@code c
+int age;
+printf("Age? ");
+scanf("%d", &age);
+printf("Next year: %d\n", age + 1);
+@end
+@text
+Use %d for int, %lf for double (the l matters here, unlike printf), and %c for char. To read several values, list several specifiers: scanf("%d %d", &a, &b) reads two numbers separated by spaces or new lines.
+@end
+@code c
+int a, b;
+double price;
+if (scanf("%d %d %lf", &a, &b, &price) != 3) {
+    printf("bad input\n");
+}
+@end
+@text
+scanf returns how many values it successfully read. Comparing the result with what you expected is how you detect bad input, such as letters where a number should be.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Reading words and lines
+@text
+scanf("%s", name) reads one word and stops at the first space. Always give a width one less than the array size, so a long word cannot overflow it. No & is needed because an array name already is an address.
+@end
+@code c
+char name[20];
+scanf("%19s", name);
+printf("Hello, %s!\n", name);
+@end
+@text
+To read a whole line including spaces, use fgets. It stores the new line character too, so the string may end in "\n".
+@end
+@code c
+char line[80];
+fgets(line, sizeof line, stdin);
+printf("You typed: %s", line);
+@end
+@text
+A common trap: after scanf("%d", ...) the new line you typed with Enter is still waiting in the input. A following %c or fgets reads that leftover new line instead of waiting for you. Putting a space before the specifier, as in scanf(" %c", &ch), skips whitespace first.
+@end
+
+#---------------------------------------------------------------------------
+@page trace What scanf does
+@code c
+int a;
+int b;
+scanf("%d %d", &a, &b);
+int sum = a + b;
+printf("%d\n", sum);
+@end
+@step 1
+@cell a int ? 1000
+@note a is declared but has no value yet.
+@step 2
+@cell a int ? 1000
+@cell b int ? 1004
+@note b is declared too. Both hold leftover garbage.
+@step 3
+@cell a int 4 1000
+@cell b int 9 1004
+@note The program waits. The user types 4 9 and Enter. scanf writes 4 to the address &a and 9 to &b.
+@step 4
+@cell a int 4 1000
+@cell b int 9 1004
+@cell sum int 13 1008
+@note sum is 4 + 9.
+@step 5
+@cell a int 4 1000
+@cell b int 9 1004
+@cell sum int 13 1008
+@note printf shows 13.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int n = 7;
+double x = 2.0;
+printf("%d %.1f %d%%\n", n, x, n * 10);
+@output
+7 2.0 70%
+@end
+@option 7 2.000000 70%
+@option 7 2 70%
+@option 7 2.0 70%
+@option 7 2.0 70
+@answer 3
+@why %.1f shows one decimal, giving 2.0. n * 10 is 70, and %% prints a single percent sign.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which specifier prints a double with 3 decimals?
+@opt %d
+@opt %.3f
+@opt %3d
+@opt %c
+@correct 2
+@why %f is for doubles and .3 sets three digits after the point.
+
+@q Why does scanf("%d", &n) need the &?
+@opt To make the number positive
+@opt scanf must change n, so it needs n's address
+@opt & converts text to int
+@opt It does not, & is optional
+@correct 2
+@why Without the address scanf could only change a copy, as with any C function.
+
+@q Which scanf specifier reads a double?
+@opt %d
+@opt %f
+@opt %lf
+@opt %s
+@correct 3
+@why For scanf a double needs %lf. Plain %f would read a float.
+
+@q What does scanf return?
+@opt The value it read
+@opt The number of values it successfully read
+@opt Always 0
+@opt The address of the variable
+@correct 2
+@why Comparing the result with the number you expected tells you whether the input was valid.
+
+@q What does scanf("%s", name) do with the input "Anna Lee"?
+@opt Stores "Anna Lee"
+@opt Stores "Anna" and leaves " Lee" in the input
+@opt Stores "Lee"
+@opt Fails and stores nothing
+@correct 2
+@why %s stops at whitespace. Use fgets to read a whole line.

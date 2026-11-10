@@ -26,7 +26,7 @@ import sys
 import tempfile
 
 C_WRAPPER = "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdbool.h>\nint main(void) {\n%s\n    return 0;\n}\n"
-CPP_WRAPPER = "#include <iostream>\n#include <string>\n#include <vector>\n#include <cstring>\nusing namespace std;\nint main() {\n%s\n    return 0;\n}\n"
+CPP_WRAPPER = "#include <iostream>\n#include <string>\n#include <vector>\n#include <iomanip>\n#include <cstring>\nusing namespace std;\nint main() {\n%s\n    return 0;\n}\n"
 
 
 class Block:
@@ -65,7 +65,7 @@ def parse_blocks(lines):
 
 
 C_INCLUDES = "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdbool.h>\n"
-CPP_INCLUDES = "#include <iostream>\n#include <string>\n#include <vector>\n#include <cstring>\n#include <cstdlib>\nusing namespace std;\n"
+CPP_INCLUDES = "#include <iostream>\n#include <string>\n#include <vector>\n#include <iomanip>\n#include <cstring>\n#include <cstdlib>\nusing namespace std;\n"
 
 
 def build_source(code, lang):

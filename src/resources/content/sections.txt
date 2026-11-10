@@ -7,6 +7,12 @@
 # A section with no @topic lines shows as "Coming soon".
 
 @section Basics | Types, operators, casting and input/output
+@topic basics_types.txt | Variables and types | int, double, char and bool, and how big each one is
+@topic basics_operators.txt | Operators | Arithmetic, integer division, shortcuts, comparisons and logic
+@topic basics_casting.txt | Type conversion and casting | Mixing int and double, truncation, and explicit casts
+@topic basics_io_c.txt | Input and output in C | printf format specifiers and reading input with scanf
+@topic basics_io_cpp.txt | Input and output in C++ | cout and cin, and how they differ from printf and scanf
+@exam exam_basics.txt
 
 @section Control flow | if/else, switch, loops and patterns
 
