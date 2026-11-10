@@ -36,7 +36,7 @@ void DrawMemory(Rectangle area, const Step *step, const Step *prev)
     // Card with a thin border
     DrawRectangleRounded(area, 0.03f, 6, CELL_BORDER);
     DrawRectangleRounded((Rectangle){ area.x + 1, area.y + 1, area.width - 2, area.height - 2 }, 0.03f, 6, WHITE);
-    DrawTextEx(font, "Memory", (Vector2){ area.x + 12, area.y + 8 }, 16, 1.6f, UI_MUTED);
+    UiText("Memory", (Vector2){ area.x + 12, area.y + 8 }, 16, UI_MUTED);
 
     if (step == NULL || step->cellCount == 0)
     {
@@ -87,13 +87,13 @@ void DrawMemory(Rectangle area, const Step *step, const Step *prev)
         if (rowH >= 38.0f)
         {
             DrawTextEx(monoFont, cell->name, (Vector2){ area.x + 14, y + 2 }, CODE_FONT_SIZE, 0, UI_TEXT);
-            DrawTextEx(font, detail, (Vector2){ area.x + 14, y + rowH - 16 }, 14, 1.4f, UI_MUTED);
+            UiText(detail, (Vector2){ area.x + 14, y + rowH - 16 }, 14, UI_MUTED);
         }
         else
         {
             Vector2 nameSize = MeasureTextEx(monoFont, cell->name, CODE_FONT_SIZE, 0);
             DrawTextEx(monoFont, cell->name, (Vector2){ area.x + 14, y + (rowH - nameSize.y)/2.0f }, CODE_FONT_SIZE, 0, UI_TEXT);
-            DrawTextEx(font, detail, (Vector2){ area.x + 14 + nameSize.x + 8, y + (rowH - 14.0f)/2.0f }, 14, 1.4f, UI_MUTED);
+            UiText(detail, (Vector2){ area.x + 14 + nameSize.x + 8, y + (rowH - 14.0f)/2.0f }, 14, UI_MUTED);
         }
     }
 

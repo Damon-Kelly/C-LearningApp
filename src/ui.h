@@ -20,6 +20,22 @@
 #define UI_GOOD    ((Color){  46, 160, 100, 255 })
 #define UI_BAD     ((Color){ 206,  64,  64, 255 })
 
+// The UI font (Carlito, loaded in raylib_game.c) looks smaller than raylib's default font at the
+// same size, so every size passed to UiText / UiMeasureText is scaled up by this factor.
+#define UI_FONT_SCALE 1.1f
+
+// Extra space between letters, as a fraction of the text size (Carlito looks cramped with none)
+#define UI_FONT_SPACING 0.03f
+
+// Draw text with the UI font at the given size, and measure it. Use these instead of
+// DrawTextEx/MeasureTextEx with `font`, so spacing and scaling stay the same everywhere.
+void UiText(const char *text, Vector2 pos, float size, Color color);
+Vector2 UiMeasureText(const char *text, float size);
+
+// Clip drawing to a rectangle given in canvas coordinates (like BeginScissorMode, but it follows
+// the window scale). End it with EndScissorMode().
+void UiBeginScissor(Rectangle area);
+
 // True on the frame the left mouse button is released over bounds
 bool UiButtonClicked(Rectangle bounds);
 
@@ -40,9 +56,10 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 // Height the text would take when wrapped to the given width (draws nothing)
 float UiMeasureWrappedText(const char *text, float width, float fontSize);
 
-// Single-line text box. Update edits buf (printable ASCII and backspace, size includes the
-// terminating zero) and returns true on the frame Enter is pressed. Draw shows it with a caret.
-bool UiTextInputUpdate(char *buf, int size);
-void UiTextInputDraw(Rectangle bounds, const char *buf, bool active);
+// Single-line text box, split like buttons: call UiTextBoxUpdate in Update for the box that
+// has focus (typing, backspace, Ctrl+V), and UiTextBoxDraw in Draw for every box.
+// masked=true shows * instead of the characters (passwords).
+void UiTextBoxUpdate(char *buf, int bufSize);
+void UiTextBoxDraw(Rectangle bounds, const char *label, const char *buf, bool active, bool masked);
 
 #endif // UI_H

@@ -49,6 +49,8 @@ extern Font monoFont;           // Code font (monospace, 18px)
 extern bool quitRequested;      // Set to true to close the app
 extern int selectedSection;     // Chosen on the Sections screen
 extern int selectedTopic;       // Index inside the chosen section
+extern float uiScale;           // Window pixels per canvas pixel (see raylib_game.c)
+extern Vector2 uiOffset;        // Where the canvas starts inside the window
 
 // Full path of a file in the resources folder next to the executable
 const char *ResourcePath(const char *relativePath);

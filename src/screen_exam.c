@@ -207,14 +207,50 @@ static void DrawChoice(const ExamQuestion *q)
 
         float belowCode = codeY + codeHeight + 10.0f;
         if (answered) UiDrawWrappedText(TextFormat("%s %s", verdict, why), (Rectangle){ PAGE_LEFT, belowCode, 500, CONTENT_BOTTOM - belowCode }, 18, lastCorrect ? UI_GOOD : UI_TEXT);
-        else DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, 1.8f, UI_MUTED);
+        else UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, UI_MUTED);
     }
     else
     {
         float y = ChoiceRect(q, q->optionCount).y + 2;
         if (answered) UiDrawWrappedText(TextFormat("%s %s", verdict, why), (Rectangle){ PAGE_LEFT, y, 640, CONTENT_BOTTOM - y }, 18, lastCorrect ? UI_GOOD : UI_TEXT);
-        else DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, y + 2 }, 18, 1.8f, UI_MUTED);
+        else UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, y + 2 }, 18, UI_MUTED);
     }
+}
+
+//----------------------------------------------------------------------------------
+// Typed-answer text box (kept in this file so it cannot clash with other UI code)
+//----------------------------------------------------------------------------------
+// Edits buf with printable ASCII and backspace; returns true on the frame Enter is pressed.
+static bool ExamInputUpdate(char *buf, int size)
+{
+    int len = (int)strlen(buf);
+
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        if (key >= 32 && key <= 126 && len < size - 1)
+        {
+            buf[len++] = (char)key;
+            buf[len] = '\0';
+        }
+        key = GetCharPressed();
+    }
+
+    if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
+
+    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER);
+}
+
+static void ExamInputDraw(Rectangle bounds, const char *buf, bool active)
+{
+    DrawRectangleRounded(bounds, 0.2f, 8, WHITE);
+    DrawRectangleLinesEx(bounds, 2.0f, active ? UI_ACCENT : UI_MUTED);
+
+    Vector2 size = MeasureTextEx(monoFont, buf, CODE_FONT_SIZE, 0);
+    Vector2 pos = { bounds.x + 12, bounds.y + (bounds.height - (float)CODE_FONT_SIZE)/2.0f };
+    DrawTextEx(monoFont, buf, pos, CODE_FONT_SIZE, 0, UI_TEXT);
+
+    if (active && ((int)(GetTime()*2.0) % 2 == 0)) DrawRectangle((int)(pos.x + size.x + 2), (int)pos.y, 2, CODE_FONT_SIZE, UI_TEXT);
 }
 
 //----------------------------------------------------------------------------------
@@ -246,7 +282,7 @@ static void UpdateTyped(const ExamQuestion *q)
         return;
     }
 
-    bool enter = UiTextInputUpdate(typed, MAX_ANSWER_LEN);
+    bool enter = ExamInputUpdate(typed, MAX_ANSWER_LEN);
     if ((enter || UiButtonClicked(TypedSubmitRect(q))) && typed[0] != '\0')
     {
         RecordAnswer(ExamAnswerMatches(q, typed));
@@ -267,7 +303,7 @@ static void DrawTyped(const ExamQuestion *q)
 
     Rectangle input = TypedInputRect(q);
     Rectangle submit = TypedSubmitRect(q);
-    UiTextInputDraw(input, typed, !answered);
+    ExamInputDraw(input, typed, !answered);
     UiButtonDrawEx(submit, "Check", UI_ACCENT, !answered && typed[0] != '\0');
 
     if (input.y + input.height > bottom) bottom = input.y + input.height;
@@ -356,7 +392,7 @@ void DrawExamScreen(void)
     {
         UiDrawHeader("Could not load this exam");
         float bottom = UiDrawWrappedText(loadError, (Rectangle){ PAGE_LEFT, 110, CONTENT_WIDTH, 250 }, 20, UI_BAD);
-        DrawTextEx(font, "Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, 2.0f, UI_MUTED);
+        UiText("Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, UI_MUTED);
         UiButtonDrawEx(backButton, "Topics", UI_MUTED, true);
         return;
     }
@@ -386,7 +422,7 @@ void DrawExamScreen(void)
         {
             const ExamQuestion *q = CurrentQuestion();
 
-            DrawTextEx(font, TextFormat("Question %d of %d", qIndex + 1, total), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, 1.6f, UI_MUTED);
+            UiText(TextFormat("Question %d of %d", qIndex + 1, total), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, UI_MUTED);
             UiDrawWrappedText(q->prompt, (Rectangle){ PAGE_LEFT, PROMPT_Y, CONTENT_WIDTH, 70 }, 22, UI_TEXT);
 
             if (q->kind == EXAM_CHOICE) DrawChoice(q);
@@ -410,8 +446,8 @@ void DrawExamScreen(void)
                 Vector2 c = ResultDot(i);
                 DrawCircleV(c, 20, correctAt[i] ? UI_GOOD : UI_BAD);
                 const char *label = TextFormat("%d", i + 1);
-                Vector2 size = MeasureTextEx(font, label, 20, 2.0f);
-                DrawTextEx(font, label, (Vector2){ c.x - size.x/2.0f, c.y - size.y/2.0f }, 20, 2.0f, WHITE);
+                Vector2 size = UiMeasureText(label, 20);
+                UiText(label, (Vector2){ c.x - size.x/2.0f, c.y - size.y/2.0f }, 20, WHITE);
             }
             UiDrawTextCentered("green = correct, red = missed", cx, 372, 16, UI_MUTED);
 
