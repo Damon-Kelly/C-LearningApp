@@ -167,7 +167,7 @@ static void DrawExplain(const Page *page)
     float innerWidth = CONTENT_WIDTH - 16;
     float contentHeight = ExplainContentHeight(page);
 
-    BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+    UiBeginScissor(view);
 
     float y = view.y - scrollY;
     for (int i = 0; i < page->itemCount; i++)
@@ -202,7 +202,7 @@ static void DrawExplain(const Page *page)
         float thumbY = view.y + (scrollY/maxScroll)*(view.height - thumbHeight);
         DrawRectangle((int)(view.x + view.width - 6), (int)view.y, 6, (int)view.height, (Color){ 225, 228, 238, 255 });
         DrawRectangleRounded((Rectangle){ view.x + view.width - 6, thumbY, 6, thumbHeight }, 1.0f, 4, UI_MUTED);
-        if (scrollY < maxScroll - 1.0f) DrawTextEx(font, "scroll for more", (Vector2){ view.x + view.width - 130, CONTENT_BOTTOM + 2 }, 14, 1.4f, UI_MUTED);
+        if (scrollY < maxScroll - 1.0f) UiText("scroll for more", (Vector2){ view.x + view.width/2.0f - 50, CONTENT_BOTTOM + 4 }, 14, UI_MUTED);
     }
 }
 
@@ -243,7 +243,7 @@ static void DrawTrace(const Page *page)
     UiButtonDrawEx(tracePrevButton, "< Prev", UI_MUTED, traceStep > -1);
     UiButtonDrawEx(traceNextButton, "Next step >", UI_ACCENT, traceStep < page->stepCount - 1);
     UiButtonDrawEx(traceResetButton, "Reset", UI_MUTED, true);
-    DrawTextEx(font, TextFormat("Step %d of %d   (arrow keys work too)", traceStep + 1, page->stepCount), (Vector2){ 440, 441 }, 16, 1.6f, UI_MUTED);
+    UiText(TextFormat("Step %d of %d   (arrow keys work too)", traceStep + 1, page->stepCount), (Vector2){ 440, 441 }, 16, UI_MUTED);
 }
 
 //----------------------------------------------------------------------------------
@@ -309,7 +309,7 @@ static void DrawPredict(const Page *page)
     }
     else
     {
-        DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, 1.8f, UI_MUTED);
+        UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, UI_MUTED);
     }
 }
 
@@ -388,7 +388,7 @@ static void DrawQuiz(const Page *page)
 
     const Question *q = &page->questions[quizIndex];
 
-    DrawTextEx(font, TextFormat("Question %d of %d", quizIndex + 1, page->questionCount), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, 1.6f, UI_MUTED);
+    UiText(TextFormat("Question %d of %d", quizIndex + 1, page->questionCount), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, UI_MUTED);
     UiDrawWrappedText(q->prompt, (Rectangle){ PAGE_LEFT, CONTENT_TOP + 22, CONTENT_WIDTH, 66 }, 22, UI_TEXT);
 
     for (int i = 0; i < q->optionCount; i++)
@@ -409,7 +409,7 @@ static void DrawQuiz(const Page *page)
     }
     else
     {
-        DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, QuizOptionRect(q->optionCount).y + 4 }, 18, 1.8f, UI_MUTED);
+        UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, QuizOptionRect(q->optionCount).y + 4 }, 18, UI_MUTED);
     }
 }
 
@@ -472,7 +472,7 @@ void DrawLessonScreen(void)
     {
         UiDrawHeader("Could not load this lesson");
         float bottom = UiDrawWrappedText(loadError, (Rectangle){ PAGE_LEFT, 110, CONTENT_WIDTH, 250 }, 20, UI_BAD);
-        DrawTextEx(font, "Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, 2.0f, UI_MUTED);
+        UiText("Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, UI_MUTED);
         UiButtonDrawEx(backButton, "Topics", UI_MUTED, true);
         return;
     }
@@ -482,10 +482,10 @@ void DrawLessonScreen(void)
     UiDrawHeader(lesson.title);
 
     const char *indicator = TextFormat("Page %d of %d", pageIndex + 1, lesson.pageCount);
-    Vector2 indicatorSize = MeasureTextEx(font, indicator, 20, 2.0f);
-    DrawTextEx(font, indicator, (Vector2){ PAGE_LEFT + CONTENT_WIDTH - indicatorSize.x, 46 }, 20, 2.0f, UI_MUTED);
+    Vector2 indicatorSize = UiMeasureText(indicator, 20);
+    UiText(indicator, (Vector2){ PAGE_LEFT + CONTENT_WIDTH - indicatorSize.x, 46 }, 20, UI_MUTED);
 
-    DrawTextEx(font, page->title, (Vector2){ PAGE_LEFT, 90 }, 20, 2.0f, UI_MUTED);
+    UiText(page->title, (Vector2){ PAGE_LEFT, 90 }, 20, UI_MUTED);
 
     switch (page->type)
     {

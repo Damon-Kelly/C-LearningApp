@@ -1,0 +1,123 @@
+# The string.h functions.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic String functions
+@summary strlen, strcpy, strcat and strcmp
+
+#---------------------------------------------------------------------------
+@page explain Copying and joining
+@text
+Because arrays cannot be assigned with =, the standard library (string.h) provides functions. strlen gives the length, strcpy copies a string into a buffer, and strcat adds a string to the end of another.
+@end
+@code c
+char a[20] = "good";
+char b[20];
+strcpy(b, a);
+strcat(b, "bye");
+printf("%s %zu\n", b, strlen(b));
+@output
+goodbye 7
+@end
+@text
+The destination must be big enough, including room for the terminator. strcpy(dest, src) needs strlen(src) + 1 bytes, and strcat needs strlen(dest) + strlen(src) + 1. C will not warn you if it is too small: the extra characters overwrite other memory (a buffer overflow).
+@end
+
+#---------------------------------------------------------------------------
+@page explain Comparing strings
+@text
+strcmp compares two strings letter by letter. It returns 0 when they are equal, a negative number if the first comes before the second alphabetically, and a positive number if it comes after. Test for equality with == 0, and only test the sign of the other results, not the exact number.
+@end
+@code c
+printf("%d\n", strcmp("apple", "apple") == 0);
+printf("%d\n", strcmp("apple", "banana") < 0);
+printf("%d\n", strcmp("b", "a") > 0);
+@output
+1
+1
+1
+@end
+@text
+Counting or searching letters is the same loop as for any array, stopping at '\0'.
+@end
+@code c
+int countVowels(const char *s) {
+    int count = 0;
+    for (int i = 0; s[i] != '\0'; i++) {
+        char c = s[i];
+        if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {
+            count++;
+        }
+    }
+    return count;
+}
+
+int main(void) {
+    printf("%d\n", countVowels("education"));
+    return 0;
+}
+@output
+5
+@end
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+char a[10] = "ab";
+char b[10] = "cd";
+strcat(a, b);
+strcpy(b, "x");
+printf("%s %s %zu\n", a, b, strlen(a));
+@output
+abcd x 4
+@end
+@option abcd x 4
+@option abcdx x 5
+@option ab x 2
+@option abcd cd 4
+@answer 1
+@why strcat changes a to "abcd". Then strcpy overwrites b with "x", which does not affect a. So a is "abcd" (length 4) and b is "x".
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which test checks that two strings a and b are equal?
+@opt a == b
+@opt strcmp(a, b) == 0
+@opt strlen(a) == strlen(b)
+@opt strcmp(a, b) == 1
+@correct 2
+@why strcmp returns 0 for equal strings. The == operator compares addresses, and equal lengths do not mean equal letters.
+
+@q What must be true of dest in strcpy(dest, src)?
+@opt It must be a string literal
+@opt It must have room for strlen(src) + 1 characters
+@opt It must be shorter than src
+@opt Nothing, strcpy resizes it
+@correct 2
+@why strcpy copies the letters and the terminator and never checks the size of the destination.
+
+@q What does strlen("hello") return?
+@opt 4
+@opt 5
+@opt 6
+@opt 0
+@correct 2
+@why It counts the letters up to the terminator and does not count the terminator.
+
+@q Why does char s[5]; s = "abc"; not compile?
+@opt "abc" is too long
+@opt An array cannot be assigned with =; use strcpy
+@opt char arrays must be initialised
+@opt Strings need double the space
+@correct 2
+@why Arrays cannot be assigned as a whole after they are declared. strcpy(s, "abc") copies the letters.
+
+@q After strcat(a, b), what has changed?
+@opt Only b
+@opt Both a and b
+@opt Only a: b has been added to its end
+@opt Neither, it returns a new string
+@correct 3
+@why strcat appends b to the end of a, changing a. The result is the same array a.

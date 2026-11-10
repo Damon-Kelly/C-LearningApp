@@ -11,6 +11,12 @@
 @section Control flow | if/else, switch, loops and patterns
 
 @section Arrays and strings | Arrays, 2D arrays and strings
+@topic arrays_basics.txt | Arrays: the basics | Declaring, indexing and looping over arrays
+@topic arrays_patterns.txt | Common array patterns | Finding the maximum, searching and reversing
+@topic arrays_2d.txt | Two-dimensional arrays | Rows, columns and nested loops
+@topic strings_basics.txt | Strings as char arrays | The terminating '\0' and working with characters
+@topic strings_library.txt | String functions | strlen, strcpy, strcat and strcmp
+@exam exam_arrays.txt
 
 @section Functions | Functions, pass by value and by reference
 

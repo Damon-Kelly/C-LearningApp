@@ -54,11 +54,11 @@ void DrawSectionsScreen(void)
         DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, available ? WHITE : (Color){ 236, 238, 244, 255 });
 
         Color titleColor = available ? UI_TEXT : UI_MUTED;
-        DrawTextEx(font, TextFormat("%d. %s", i + 1, section->name), (Vector2){ r.x + 16, r.y + 12 }, 24, 2.4f, titleColor);
+        UiText(TextFormat("%d. %s", i + 1, section->name), (Vector2){ r.x + 16, r.y + 12 }, 24, titleColor);
         UiDrawWrappedText(section->description, (Rectangle){ r.x + 16, r.y + 42, r.width - 32, 46 }, 16, UI_MUTED);
 
         const char *status = available ? TextFormat("%d topic%s", section->topicCount, section->topicCount == 1 ? "" : "s") : "Coming soon";
-        DrawTextEx(font, status, (Vector2){ r.x + 16, r.y + r.height - 24 }, 16, 1.6f, available ? UI_ACCENT : UI_MUTED);
+        UiText(status, (Vector2){ r.x + 16, r.y + r.height - 24 }, 16, available ? UI_ACCENT : UI_MUTED);
     }
 
     UiButtonDrawEx(backButton, "Back", UI_MUTED, true);

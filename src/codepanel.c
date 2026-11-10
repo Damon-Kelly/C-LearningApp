@@ -1,5 +1,6 @@
 #include "codepanel.h"
 #include "screens.h"    // monoFont, font
+#include "ui.h"         // UiText
 
 #include <ctype.h>
 #include <stdio.h>
@@ -137,8 +138,8 @@ void DrawCodePanel(Rectangle bounds, const char *code, const char *lang, int hig
 
     // Language badge in the top-right corner
     const char *badge = (lang != NULL && strcmp(lang, "cpp") == 0) ? "C++" : "C";
-    Vector2 badgeSize = MeasureTextEx(font, badge, 14, 1.4f);
-    DrawTextEx(font, badge, (Vector2){ bounds.x + bounds.width - badgeSize.x - 10, bounds.y + 6 }, 14, 1.4f, GUTTER_COLOR);
+    Vector2 badgeSize = UiMeasureText(badge, 14);
+    UiText(badge, (Vector2){ bounds.x + bounds.width - badgeSize.x - 10, bounds.y + 6 }, 14, GUTTER_COLOR);
 
     const float charW = MeasureTextEx(monoFont, "M", CODE_FONT_SIZE, 0).x;
     const float textX = bounds.x + PANEL_PADDING + GUTTER_WIDTH;
@@ -190,7 +191,7 @@ void DrawCodePanel(Rectangle bounds, const char *code, const char *lang, int hig
 void DrawOutputPanel(Rectangle bounds, const char *output)
 {
     DrawRectangleRounded(bounds, 0.08f, 6, OUTPUT_BG);
-    DrawTextEx(font, "Output", (Vector2){ bounds.x + PANEL_PADDING, bounds.y + 5 }, 14, 1.4f, GUTTER_COLOR);
+    UiText("Output", (Vector2){ bounds.x + PANEL_PADDING, bounds.y + 5 }, 14, GUTTER_COLOR);
 
     if (output == NULL || output[0] == '\0') return;
 

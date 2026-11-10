@@ -1,0 +1,162 @@
+# Two-dimensional arrays.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Two-dimensional arrays
+@summary Rows, columns and nested loops
+
+#---------------------------------------------------------------------------
+@page explain Rows and columns
+@text
+A 2D array is a table. int grid[2][3] has 2 rows and 3 columns, and you pick one cell with two indexes: grid[row][col]. Both start at 0.
+@end
+@code c
+int grid[2][3] = {
+    {1, 2, 3},
+    {4, 5, 6}
+};
+printf("%d %d\n", grid[0][2], grid[1][0]);
+@output
+3 4
+@end
+@text
+To visit every cell, nest two loops: the outer one over the rows and the inner one over the columns.
+@end
+@code c
+int grid[2][3] = {{1, 2, 3}, {4, 5, 6}};
+for (int r = 0; r < 2; r++) {
+    for (int c = 0; c < 3; c++) {
+        printf("%d%s", grid[r][c], c < 2 ? " " : "\n");
+    }
+}
+@output
+1 2 3
+4 5 6
+@end
+
+#---------------------------------------------------------------------------
+@page explain In memory and in functions
+@text
+Memory is a single line, so a 2D array is stored row after row: all of row 0, then all of row 1. The cell grid[r][c] sits at position r * 3 + c in that line (for 3 columns).
+@end
+@text
+That is why a function that receives a 2D array must be told the number of columns: it needs that number to find the start of each row. The number of rows can be passed as a separate parameter, just like the length of a 1D array.
+@end
+@code c
+int sumAll(int g[][3], int rows) {
+    int sum = 0;
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < 3; c++) {
+            sum += g[r][c];
+        }
+    }
+    return sum;
+}
+
+int main(void) {
+    int g[2][3] = {{1, 2, 3}, {4, 5, 6}};
+    printf("%d\n", sumAll(g, 2));
+    return 0;
+}
+@output
+21
+@end
+@text
+As with 1D arrays, the function works on the caller's real array, so changes it makes are visible outside.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Changing a table
+@code c
+int g[2][2] = {{1, 2}, {3, 4}};
+g[0][1] = g[1][0];
+g[1][1] = g[0][0] + g[0][1] * 2;
+g[1][0] = 0;
+@end
+@step 1
+@cell g[0][0] int 1 1000
+@cell g[0][1] int 2 1004
+@cell g[1][0] int 3 1008
+@cell g[1][1] int 4 1012
+@note Row 0 is stored first, then row 1, all side by side.
+@step 2
+@cell g[0][0] int 1 1000
+@cell g[0][1] int 3 1004
+@cell g[1][0] int 3 1008
+@cell g[1][1] int 4 1012
+@note g[1][0] is copied into g[0][1].
+@step 3
+@cell g[0][0] int 1 1000
+@cell g[0][1] int 3 1004
+@cell g[1][0] int 3 1008
+@cell g[1][1] int 7 1012
+@note 1 + 3 * 2 = 7. Multiplication happens before the addition.
+@step 4
+@cell g[0][0] int 1 1000
+@cell g[0][1] int 3 1004
+@cell g[1][0] int 0 1008
+@cell g[1][1] int 7 1012
+@note One cell set to 0. The table now reads 1 3 / 0 7.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+int sum = 0;
+for (int i = 0; i < 3; i++) {
+    sum += m[i][i] + m[i][2 - i];
+}
+printf("%d\n", sum);
+@output
+30
+@end
+@option 30
+@option 15
+@option 25
+@option 45
+@answer 1
+@why m[i][i] is the main diagonal (1, 5, 9) and m[i][2 - i] is the other diagonal (3, 5, 7). The centre 5 is counted twice: 15 + 15 = 30.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q int g[3][4]; has how many rows and columns?
+@opt 4 rows, 3 columns
+@opt 3 rows, 4 columns
+@opt 3 rows, 3 columns
+@opt 12 rows, 1 column
+@correct 2
+@why The first size is the number of rows and the second is the number of columns.
+
+@q Which cell is g[1][2]?
+@opt Row 1, column 2 (second row, third column)
+@opt Row 2, column 1
+@opt The second row, second column
+@opt The third row, first column
+@correct 1
+@why Both indexes start at 0, and the row comes first.
+
+@q How many ints does int g[3][4]; hold?
+@opt 7
+@opt 12
+@opt 3
+@opt 4
+@correct 2
+@why 3 rows of 4 values each is 12 values.
+
+@q A function receives int g[3][4]. Which parameter declaration works?
+@opt int g[][]
+@opt int g[3][]
+@opt int g[][4]
+@opt int g[4]
+@correct 3
+@why The column count is required so the compiler can find where each row starts. The row count can be left out.
+
+@q How is a 2D array laid out in memory?
+@opt Column by column
+@opt Row after row, in one continuous block
+@opt Each row in a separate place
+@opt In random order
+@correct 2
+@why All of row 0 comes first, then row 1, and so on.

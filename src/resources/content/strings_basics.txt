@@ -1,0 +1,171 @@
+# Strings as char arrays.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Strings as char arrays
+@summary The terminating '\0' and working with characters
+
+#---------------------------------------------------------------------------
+@page explain A string is a char array
+@text
+C has no separate string type. A string is an array of char that ends with a special character, '\0' (the "null terminator", value 0). Functions like printf("%s") read characters until they reach it.
+@end
+@code c
+char word[] = "cat";
+printf("%s\n", word);
+printf("%c %d\n", word[1], word[3]);
+@output
+cat
+a 0
+@end
+@text
+"cat" has 3 letters but needs 4 slots, because the terminator takes one. So an array meant to hold n characters must have size n + 1. strlen counts the letters and does not include the terminator.
+@end
+@code c
+char word[] = "cat";
+printf("%zu %zu\n", sizeof(word), strlen(word));
+@output
+4 3
+@end
+
+#---------------------------------------------------------------------------
+@page explain Working with the characters
+@text
+Since a string is an array, you can read and change single characters with an index, and you can find the end by looking for '\0'.
+@end
+@code c
+char s[] = "hello";
+s[0] = 'J';
+int n = 0;
+while (s[n] != '\0') {
+    n++;
+}
+printf("%s has %d letters\n", s, n);
+@output
+Jello has 5 letters
+@end
+@text
+Two things you cannot do with arrays of char: assign a whole string with = after the declaration, and compare two strings with ==. For char arrays, == compares addresses, not letters. The next topic shows the functions that do these jobs.
+@end
+@text
+Also note the difference between two ways of writing a string. char name[] = "Ann"; makes your own modifiable copy. char *name = "Ann"; points at a string literal stored in read-only memory, so changing its characters is undefined behaviour.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Characters are numbers
+@text
+A char is a small integer holding a character code (ASCII). 'a' is 97, 'b' is 98, and the letters are in order. That lets you do arithmetic on characters.
+@end
+@code c
+char c = 'a';
+c = c + 2;
+printf("%c %d\n", c, c);
+printf("%d\n", 'z' - 'a');
+@output
+c 99
+25
+@end
+@text
+c - 'a' tells you how far a letter is from 'a'. Adding 'A' to that gives the capital version, a classic way to convert case by hand.
+@end
+@code c
+char c = 'g';
+char upper = c - 'a' + 'A';
+printf("%c\n", upper);
+@output
+G
+@end
+
+#---------------------------------------------------------------------------
+@page trace Building a string by hand
+@code c
+char s[4];
+s[0] = 'h';
+s[1] = 'i';
+s[2] = '\0';
+@end
+@step 1
+@cell s[0] char ? 1000
+@cell s[1] char ? 1001
+@cell s[2] char ? 1002
+@cell s[3] char ? 1003
+@note A new char array holds garbage. Characters are one byte each, so the addresses go up by 1.
+@step 2
+@cell s[0] char 'h' 1000
+@cell s[1] char ? 1001
+@cell s[2] char ? 1002
+@cell s[3] char ? 1003
+@note The first letter is stored.
+@step 3
+@cell s[0] char 'h' 1000
+@cell s[1] char 'i' 1001
+@cell s[2] char ? 1002
+@cell s[3] char ? 1003
+@note The second letter is stored. It is not a valid string yet: nothing marks the end.
+@step 4
+@cell s[0] char 'h' 1000
+@cell s[1] char 'i' 1001
+@cell s[2] char '\0' 1002
+@cell s[3] char ? 1003
+@note The terminator makes it the string "hi" (length 2). s[3] is left over and ignored.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+char s[] = "code";
+s[1] = 'a';
+s[3] = '\0';
+printf("%s %zu\n", s, strlen(s));
+@output
+cad 3
+@end
+@option cad 3
+@option cade 4
+@option cad 4
+@option code 3
+@answer 1
+@why s[1] = 'a' turns "code" into "cade". Then s[3] = '\0' ends the string early, leaving "cad", which has 3 letters.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does sizeof(s) give for char s[] = "dog";?
+@opt 3
+@opt 4
+@opt 5
+@opt 8
+@correct 2
+@why Three letters plus the terminating '\0' make 4 bytes.
+
+@q Which character marks the end of a string?
+@opt ' '
+@opt '\n'
+@opt '\0'
+@opt '.'
+@correct 3
+@why The null terminator, with value 0, tells functions where the string stops.
+
+@q What is the smallest array that can hold the 10-letter string "programmer" as a string?
+@opt char s[10]
+@opt char s[11]
+@opt char s[9]
+@opt char s[8]
+@correct 2
+@why 10 letters plus the terminator is 11 slots.
+
+@q What does 'c' - 'a' evaluate to?
+@opt 2
+@opt 'c'
+@opt 99
+@opt -2
+@correct 1
+@why Letter codes are consecutive, so the difference is the distance between the letters.
+
+@q Given two char arrays a and b, what does a == b compare?
+@opt The letters, one by one
+@opt The lengths
+@opt The addresses of the arrays, not the letters
+@opt Nothing, it will not compile
+@correct 3
+@why Comparing the arrays with == compares where they are stored. Use strcmp to compare the letters.
