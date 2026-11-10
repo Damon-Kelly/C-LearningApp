@@ -28,8 +28,11 @@ int selectedTopic = 0;
 static const int screenWidth = GAME_WIDTH;
 static const int screenHeight = GAME_HEIGHT;
 
-// Everything is drawn into this fixed-size canvas, then scaled to the window with black bars
-static RenderTexture2D canvas;
+// Screens are laid out on a fixed 960x540 canvas. It is drawn straight to the window through a
+// 2D camera (zoom + offset), so text and shapes are rendered at the real window resolution and
+// stay sharp. Black bars fill any space the canvas does not cover.
+float uiScale = 1.0f;                 // window pixels per canvas pixel
+Vector2 uiOffset = { 0, 0 };          // where the canvas starts in the window
 static bool startFullscreen = true;     // F11 or Alt+Enter toggles at any time
 
 // Table of screens, indexed by GameScreen. To add a screen: add it to the enum
@@ -40,6 +43,8 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [TOPICS]   = { InitTopicsScreen,   UpdateTopicsScreen,   DrawTopicsScreen,   UnloadTopicsScreen,   FinishTopicsScreen },
     [LESSON]   = { InitLessonScreen,   UpdateLessonScreen,   DrawLessonScreen,   UnloadLessonScreen,   FinishLessonScreen },
     [EXAM]     = { InitExamScreen,     UpdateExamScreen,     DrawExamScreen,     UnloadExamScreen,     FinishExamScreen },
+    [PROFILE]  = { InitProfileScreen,  UpdateProfileScreen,  DrawProfileScreen,  UnloadProfileScreen,  FinishProfileScreen },
+    [SETTINGS] = { InitSettingsScreen, UpdateSettingsScreen, DrawSettingsScreen, UnloadSettingsScreen, FinishSettingsScreen },
 };
 
 // Fade transition state
@@ -73,11 +78,13 @@ int main(void)
     SetExitKey(KEY_NULL);           // ESC is used for "back"; the window close button still quits
     SetTargetFPS(60);
 
-    canvas = LoadRenderTexture(screenWidth, screenHeight);
-    SetTextureFilter(canvas.texture, TEXTURE_FILTER_BILINEAR);
     if (startFullscreen) ToggleFullscreenMode();
 
-    font = GetFontDefault();        // TODO: load a nicer UI font from resources/
+    // UI font, loaded large (48px) and scaled down when drawn so text stays sharp at any window size.
+    // Falls back to raylib's default font if the file is missing.
+    font = LoadFontEx(ResourcePath("Carlito-Regular.ttf"), 48, NULL, 0);
+    if (font.texture.id == 0 || font.glyphCount == 0) font = GetFontDefault();
+    SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
 
     // Monospace font for code. Falls back to raylib's default font if the file is missing.
     monoFont = LoadFontEx(ResourcePath("DejaVuSansMono.ttf"), 18, NULL, 0);
@@ -95,8 +102,8 @@ int main(void)
 
     screens[currentScreen].unload();
 
+    UnloadFont(font);
     UnloadFont(monoFont);
-    UnloadRenderTexture(canvas);
     CloseWindow();
 
     return 0;
@@ -179,6 +186,8 @@ static void UpdateDrawFrame(void)
     Rectangle dest = CanvasDestination();
     SetMouseOffset((int)-dest.x, (int)-dest.y);
     SetMouseScale(screenWidth/dest.width, screenHeight/dest.height);
+    uiScale = dest.width/screenWidth;
+    uiOffset = (Vector2){ dest.x, dest.y };
 
     // Update (input is ignored while a transition is running)
     if (!onTransition)
@@ -190,22 +199,25 @@ static void UpdateDrawFrame(void)
     }
     else UpdateTransition();
 
-    // Draw into the canvas
-    BeginTextureMode(canvas);
-
-        ClearBackground(UI_BG);
-
-        screens[currentScreen].draw();
-
-        if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
-
-    EndTextureMode();
-
-    // Scale the canvas to the window (render textures are stored upside down, hence the negative height)
     BeginDrawing();
 
         ClearBackground(BLACK);
-        DrawTexturePro(canvas.texture, (Rectangle){ 0, 0, (float)screenWidth, -(float)screenHeight }, dest, (Vector2){ 0, 0 }, 0.0f, WHITE);
+
+        BeginMode2D((Camera2D){ .offset = uiOffset, .target = { 0, 0 }, .rotation = 0.0f, .zoom = uiScale });
+
+            DrawRectangle(0, 0, screenWidth, screenHeight, UI_BG);
+
+            screens[currentScreen].draw();
+
+            if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
+
+        EndMode2D();
+
+        // Black bars on top, so nothing a screen draws outside the canvas shows
+        DrawRectangle(0, 0, (int)dest.x, GetScreenHeight(), BLACK);
+        DrawRectangle((int)(dest.x + dest.width + 0.5f), 0, GetScreenWidth(), GetScreenHeight(), BLACK);
+        DrawRectangle(0, 0, GetScreenWidth(), (int)dest.y, BLACK);
+        DrawRectangle(0, (int)(dest.y + dest.height + 0.5f), GetScreenWidth(), GetScreenHeight(), BLACK);
 
     EndDrawing();
 }

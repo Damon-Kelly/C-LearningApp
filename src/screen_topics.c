@@ -88,8 +88,9 @@ void DrawTopicsScreen(void)
     if (section == NULL) return;
 
     UiDrawHeader(section->name);
+    UiDrawLoggedInAs();
 
-    BeginScissorMode(0, (int)LIST_TOP, 960, (int)(LIST_BOTTOM - LIST_TOP));
+    UiBeginScissor((Rectangle){ 0, LIST_TOP, GAME_WIDTH, LIST_BOTTOM - LIST_TOP });
 
     for (int i = 0; i < RowCount(section); i++)
     {
@@ -100,7 +101,7 @@ void DrawTopicsScreen(void)
         {
             const TopicRef *topic = &section->topics[i];
             UiButtonDraw(r, topic->title);
-            DrawTextEx(font, topic->summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, 1.8f, UI_MUTED);
+            UiText(topic->summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
         }
         else
         {
@@ -108,7 +109,7 @@ void DrawTopicsScreen(void)
             UiButtonDrawEx(r, "Section exam", unlocked ? EXAM_COLOR : UI_MUTED, unlocked);
             const char *summary = unlocked ? "Test yourself on the whole section. Retry as often as you like."
                                            : "Finish the quizzes in this section's topics to unlock the exam.";
-            DrawTextEx(font, summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, 1.8f, UI_MUTED);
+            UiText(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
         }
     }
 
@@ -122,7 +123,7 @@ void DrawTopicsScreen(void)
         float thumbY = LIST_TOP + (scrollY/max)*(viewHeight - thumbHeight);
         DrawRectangle(912, (int)LIST_TOP, 6, (int)viewHeight, (Color){ 225, 228, 238, 255 });
         DrawRectangleRounded((Rectangle){ 912, thumbY, 6, thumbHeight }, 1.0f, 4, UI_MUTED);
-        if (scrollY < max - 1.0f) DrawTextEx(font, "scroll for more", (Vector2){ 760, 490 }, 14, 1.4f, UI_MUTED);
+        if (scrollY < max - 1.0f) UiText("scroll for more", (Vector2){ 760, 490 }, 14, UI_MUTED);
     }
 
     UiButtonDrawEx(backButton, "Back", UI_MUTED, true);

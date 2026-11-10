@@ -20,6 +20,22 @@
 #define UI_GOOD    ((Color){  46, 160, 100, 255 })
 #define UI_BAD     ((Color){ 206,  64,  64, 255 })
 
+// The UI font (Carlito, loaded in raylib_game.c) looks smaller than raylib's default font at the
+// same size, so every size passed to UiText / UiMeasureText is scaled up by this factor.
+#define UI_FONT_SCALE 1.1f
+
+// Extra space between letters, as a fraction of the text size (Carlito looks cramped with none)
+#define UI_FONT_SPACING 0.03f
+
+// Draw text with the UI font at the given size, and measure it. Use these instead of
+// DrawTextEx/MeasureTextEx with `font`, so spacing and scaling stay the same everywhere.
+void UiText(const char *text, Vector2 pos, float size, Color color);
+Vector2 UiMeasureText(const char *text, float size);
+
+// Clip drawing to a rectangle given in canvas coordinates (like BeginScissorMode, but it follows
+// the window scale). End it with EndScissorMode().
+void UiBeginScissor(Rectangle area);
+
 // True on the frame the left mouse button is released over bounds
 bool UiButtonClicked(Rectangle bounds);
 
@@ -29,6 +45,10 @@ void UiButtonDrawEx(Rectangle bounds, const char *text, Color fill, bool enabled
 
 // Screen title at the top-left with an accent underline
 void UiDrawHeader(const char *title);
+
+// "Logged in as <name>" in small muted text just under the header line. Draws nothing when
+// nobody is logged in.
+void UiDrawLoggedInAs(void);
 
 // Text centered horizontally around centerX
 void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize, Color color);

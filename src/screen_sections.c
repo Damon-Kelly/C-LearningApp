@@ -5,12 +5,14 @@
 
 static GameScreen finishScreen = UNKNOWN;
 
-static const Rectangle backButton = { 60, 480, 140, 40 };
+static const Rectangle backButton     = { 60, 480, 140, 40 };       // acts as "Log out"
+static const Rectangle profileButton  = { 640, 480, 120, 40 };
+static const Rectangle settingsButton = { 780, 480, 120, 40 };
 
 // Two columns of cards: with 6 sections that is 3 rows
 static Rectangle CardRect(int i)
 {
-    return (Rectangle){ 60.0f + (i % 2)*430.0f, 100.0f + (i / 2)*124.0f, 410, 112 };
+    return (Rectangle){ 60.0f + (i % 2)*430.0f, 110.0f + (i / 2)*124.0f, 410, 112 };
 }
 
 void InitSectionsScreen(void)
@@ -30,12 +32,17 @@ void UpdateSectionsScreen(void)
         }
     }
 
+    if (UiButtonClicked(profileButton)) finishScreen = PROFILE;
+    if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
+
+    // Going back to the title screen logs the user out
     if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TITLE;
 }
 
 void DrawSectionsScreen(void)
 {
     UiDrawHeader("Sections");
+    UiDrawLoggedInAs();
 
     if (GetContentError()[0] != '\0')
     {
@@ -54,14 +61,16 @@ void DrawSectionsScreen(void)
         DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, available ? WHITE : (Color){ 236, 238, 244, 255 });
 
         Color titleColor = available ? UI_TEXT : UI_MUTED;
-        DrawTextEx(font, TextFormat("%d. %s", i + 1, section->name), (Vector2){ r.x + 16, r.y + 12 }, 24, 2.4f, titleColor);
+        UiText(TextFormat("%d. %s", i + 1, section->name), (Vector2){ r.x + 16, r.y + 12 }, 24, titleColor);
         UiDrawWrappedText(section->description, (Rectangle){ r.x + 16, r.y + 42, r.width - 32, 46 }, 16, UI_MUTED);
 
         const char *status = available ? TextFormat("%d topic%s", section->topicCount, section->topicCount == 1 ? "" : "s") : "Coming soon";
-        DrawTextEx(font, status, (Vector2){ r.x + 16, r.y + r.height - 24 }, 16, 1.6f, available ? UI_ACCENT : UI_MUTED);
+        UiText(status, (Vector2){ r.x + 16, r.y + r.height - 24 }, 16, available ? UI_ACCENT : UI_MUTED);
     }
 
-    UiButtonDrawEx(backButton, "Back", UI_MUTED, true);
+    UiButtonDrawEx(backButton, "Log out", UI_MUTED, true);
+    UiButtonDraw(profileButton, "Profile");
+    UiButtonDraw(settingsButton, "Settings");
 }
 
 void UnloadSectionsScreen(void)
