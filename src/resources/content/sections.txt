@@ -15,6 +15,12 @@
 @exam exam_basics.txt
 
 @section Control flow | if/else, switch, loops and patterns
+@topic control_if.txt | Making decisions with if | if, else if, else, truthiness and the ternary operator
+@topic control_switch.txt | switch | Choosing between many fixed values, break and fall-through
+@topic control_loops.txt | Loops | while, do-while and for, plus break and continue
+@topic control_nested.txt | Nested loops | Loops inside loops: patterns, tables and how break behaves
+@topic control_patterns.txt | Common loop patterns | Accumulating, counting, digits, primes and input checking
+@exam exam_control.txt
 
 @section Arrays and strings | Arrays, 2D arrays and strings
 @topic arrays_basics.txt | Arrays: the basics | Declaring, indexing and looping over arrays
