@@ -30,7 +30,8 @@ A variable that is declared without a value, such as int n;, holds whatever happ
 sizeof tells you how many bytes a type or variable takes. The sizes below are what you get on a typical 64-bit computer; only char is guaranteed to be exactly 1 byte.
 @end
 @code c
-printf("%zu %zu %zu %zu\n", sizeof(char), sizeof(int), sizeof(double), sizeof(long long));
+printf("%zu %zu ", sizeof(char), sizeof(int));
+printf("%zu %zu\n", sizeof(double), sizeof(long long));
 @output
 1 4 8 8
 @end

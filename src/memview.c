@@ -5,8 +5,8 @@
 
 #include <string.h>
 
-#define BOX_LEFT_OFFSET  150.0f     // room for the name/type/address label
-#define BOX_WIDTH        110.0f
+#define BOX_LEFT_OFFSET  180.0f     // room for the name/type/address label
+#define BOX_WIDTH        100.0f
 
 #define CELL_BORDER      ((Color){ 180, 185, 200, 255 })
 #define CELL_CHANGED     ((Color){ 255, 159,  28, 255 })
@@ -93,6 +93,10 @@ void DrawMemory(Rectangle area, const Step *step, const Step *prev)
         {
             Vector2 nameSize = MeasureTextEx(monoFont, cell->name, CODE_FONT_SIZE, 0);
             DrawTextEx(monoFont, cell->name, (Vector2){ area.x + 14, y + (rowH - nameSize.y)/2.0f }, CODE_FONT_SIZE, 0, UI_TEXT);
+
+            // Long names (such as n1.nextPtr) leave no room for the type: show just the address then
+            float room = BOX_LEFT_OFFSET - 14.0f - nameSize.x - 14.0f;
+            if (UiMeasureText(detail, 14).x > room) detail = TextFormat("@%d", cell->addr);
             UiText(detail, (Vector2){ area.x + 14 + nameSize.x + 8, y + (rowH - 14.0f)/2.0f }, 14, UI_MUTED);
         }
     }

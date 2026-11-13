@@ -37,18 +37,23 @@ class Block:
         self.code_end = None              # index just after the last code line
         self.out_start = None             # index of the first output line, if any
         self.out_end = None
+        self.page = "explain"             # kind of the page the block is on (explain/trace/predict/...)
 
 
 def parse_blocks(lines):
-    blocks, current, mode = [], None, None
+    blocks, current, mode, page = [], None, None, "explain"
     for i, raw in enumerate(lines):
         line = raw.rstrip("\n")
         stripped = line.strip()
         if mode is None:
-            if stripped.startswith("@code"):
+            if stripped.startswith("@page"):
+                parts = stripped.split()
+                page = parts[1] if len(parts) > 1 else "explain"
+            elif stripped.startswith("@code"):
                 parts = stripped.split()
                 lang = parts[1] if len(parts) > 1 else "c"
                 current = Block(lang, i + 1, i + 1)
+                current.page = page
                 mode = "code"
         elif stripped == "@end":
             if mode == "code":
@@ -124,6 +129,17 @@ def check_file(path, fix):
         has_output = block.out_start is not None
         ok, result = compile_and_run(code, block.lang, run=has_output)
         where = "%s:%d" % (os.path.basename(path), block.line_no)
+
+        # Layout limits: code sits in a fixed-width panel, and the language badge (C / C++)
+        # is drawn in the top-right corner over the first line.
+        # Measured widths at the default font: trace panel fits ~42 characters, predict ~50, explain ~80.
+        # The badge costs the first line about 4 characters.
+        max_width = {"trace": 42, "predict": 50}.get(block.page, 80)
+        for k, code_line in enumerate(code.split("\n")):
+            limit = max_width - 4 if (block.page in ("trace", "predict") and k == 0) else max_width
+            if len(code_line) > limit:
+                print("FAIL %s  code line %d is %d characters (limit %d for %s pages): %r" % (where, k + 1, len(code_line), limit, block.page, code_line))
+                problems += 1
 
         if not ok:
             print("FAIL %s  %s" % (where, result))
@@ -238,6 +254,14 @@ def check_exam(path):
 
     for q in questions:
         where = "%s:%d" % (name, q["line"])
+
+        # Layout limit: exam code panels are 500 px wide for choice questions and 470 px for typed ones
+        if q["code"]:
+            limit = 50 if q["kind"] != "typed" else 47
+            for k, code_line in enumerate(q["code"].split("\n")):
+                if len(code_line) > (limit - 4 if k == 0 else limit):
+                    print("FAIL %s  code line %d is %d characters (limit %d for exam code): %r" % (where, k + 1, len(code_line), limit - 4 if k == 0 else limit, code_line))
+                    problems += 1
 
         if q["kind"] == "typed":
             if q["code"] is None or "____" not in q["code"]:

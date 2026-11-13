@@ -1,0 +1,238 @@
+# Linked lists: searching and deleting a node.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Search and delete
+@summary Finding a value, unlinking a node with a prev pointer, and delete
+
+#---------------------------------------------------------------------------
+@page explain Searching a list
+@text
+Searching uses the same walk as printing, with a test inside the loop. Return true as soon as the value is found, and false if the loop runs off the end.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+bool Contains(Node* headPtr, int value) {
+    Node* curNodePtr = headPtr;
+    while (curNodePtr != nullptr) {
+        if (curNodePtr->data == value) {
+            return true;
+        }
+        curNodePtr = curNodePtr->nextPtr;
+    }
+    return false;
+}
+
+int main() {
+    Node c = {30, nullptr};
+    Node b = {20, &c};
+    Node a = {10, &b};
+    cout << Contains(&a, 20) << " " << Contains(&a, 25) << endl;
+    return 0;
+}
+@output
+1 0
+@end
+@text
+An empty list needs no special case: the loop never runs and the function returns false. In the worst case a search visits every node, so it is slower than the direct indexing of an array.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Deleting the first node
+@text
+Deleting a node has two jobs: unlink it, so the list no longer reaches it, and then delete it, so the memory is given back. Do them in that order. For the first node, unlinking means moving the head.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void DeleteFirst(Node** ptrToHeadPtr) {
+    if (*ptrToHeadPtr == nullptr) {
+        return;
+    }
+    Node* oldHeadPtr = *ptrToHeadPtr;
+    *ptrToHeadPtr = oldHeadPtr->nextPtr;
+    delete oldHeadPtr;
+}
+
+int main() {
+    Node* headPtr = new Node{1, new Node{2, nullptr}};
+    DeleteFirst(&headPtr);
+    cout << headPtr->data << endl;
+    delete headPtr;
+    return 0;
+}
+@output
+2
+@end
+@text
+oldHeadPtr remembers the node to remove. The head is moved to the second node first, and only then is the old node deleted. If you deleted first, you could no longer read oldHeadPtr->nextPtr to find the rest of the list.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Deleting a node with a given value
+@text
+To remove a node from the middle, the node before it must be changed to skip over it. A singly linked node cannot point backwards, so while walking you keep a second pointer, prev, one node behind the walker. When the walker finds the value, prev->nextPtr is set to the node after it.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void DeleteWithValue(Node** ptrToHeadPtr, int value) {
+    if (*ptrToHeadPtr == nullptr) {
+        cout << "List is empty." << endl;
+        return;
+    }
+    Node* curNodePtr = *ptrToHeadPtr;
+    if (curNodePtr->data == value) {
+        *ptrToHeadPtr = curNodePtr->nextPtr;
+        delete curNodePtr;
+        return;
+    }
+    Node* prev = nullptr;
+    while (curNodePtr != nullptr && curNodePtr->data != value) {
+        prev = curNodePtr;
+        curNodePtr = curNodePtr->nextPtr;
+    }
+    if (curNodePtr == nullptr) {
+        cout << "Value not found in the list." << endl;
+        return;
+    }
+    prev->nextPtr = curNodePtr->nextPtr;
+    delete curNodePtr;
+}
+
+int main() {
+    Node* headPtr = new Node{10, new Node{20, new Node{30, nullptr}}};
+    DeleteWithValue(&headPtr, 20);
+    DeleteWithValue(&headPtr, 99);
+    for (Node* cur = headPtr; cur != nullptr; cur = cur->nextPtr) {
+        cout << cur->data << endl;
+    }
+    return 0;
+}
+@output
+Value not found in the list.
+10
+30
+@end
+@text
+The function handles four cases. An empty list prints a message. If the first node holds the value, the head moves (the same as DeleteFirst). Otherwise the loop searches, keeping prev one step behind. If the walker falls off the end, the value is not there. If it stops on a node, the unlink line prev->nextPtr = curNodePtr->nextPtr bypasses that node and delete frees it.
+@end
+@text
+The first-node case must be separate because the first node has no previous node: prev would still be nullptr, and prev->nextPtr would crash.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Unlinking the middle node
+@code cpp
+struct Node { int data;
+              Node* nextPtr; };
+Node c = {30};
+Node b = {20, &c}, a = {10, &b};
+Node *prev = nullptr, *cur = &a;
+while (cur->data != 20) {
+    prev = cur; cur = cur->nextPtr; }
+prev->nextPtr = cur->nextPtr;
+@end
+@step 5
+@cell c.data int 30 1000
+@cell c.nextPtr Node* NULL 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* ->c.data 1024
+@cell a.data int 10 1032
+@cell a.nextPtr Node* ->b.data 1040
+@cell prev Node* NULL 1048
+@cell cur Node* ->a.data 1056
+@note The list is a (10), b (20), c (30). cur starts at the first node and prev has nothing behind it yet.
+@step 7
+@cell c.data int 30 1000
+@cell c.nextPtr Node* NULL 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* ->c.data 1024
+@cell a.data int 10 1032
+@cell a.nextPtr Node* ->b.data 1040
+@cell prev Node* ->a.data 1048
+@cell cur Node* ->b.data 1056
+@note The first node was not 20, so prev followed cur to node a and cur moved on to node b. Now cur->data is 20 and the loop stops. prev is exactly one node behind.
+@step 8
+@cell c.data int 30 1000
+@cell c.nextPtr Node* NULL 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* ->c.data 1024
+@cell a.data int 10 1032
+@cell a.nextPtr Node* ->c.data 1040
+@cell prev Node* ->a.data 1048
+@cell cur Node* ->b.data 1056
+@note prev->nextPtr = cur->nextPtr makes a point straight at c. The list is now 10, 30. Node b is unlinked: with heap nodes, delete cur would now free it.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3, nullptr};
+Node b = {2, &c};
+Node a = {1, &b};
+a.nextPtr = b.nextPtr;
+cout << a.data << " " << a.nextPtr->data << endl;
+@output
+1 3
+@end
+@option 1 2
+@option 1 3
+@option 2 3
+@option 1 1
+@answer 2
+@why b.nextPtr holds the address of c, so a.nextPtr now points at c instead of b. The list from a is 1 then 3, and node b has been skipped.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What are the two jobs when deleting a node?
+@opt Copy it, then rename it
+@opt Unlink it from the list, then delete it
+@opt Delete it, then unlink it
+@opt Sort the list, then delete it
+@correct 2
+@why Unlink first so the list stays connected and you can still read the next pointer, then free the memory.
+
+@q Why does DeleteWithValue keep a prev pointer?
+@opt To count the nodes
+@opt The node before the target must be changed to skip it
+@opt To free the memory later
+@opt To walk backwards
+@correct 2
+@why A singly linked node only knows the next node, so the previous one has to be remembered while walking.
+
+@q Why is the case where the first node matches handled separately?
+@opt The head has no previous node, and the head pointer itself must change
+@opt The first node cannot be deleted
+@opt It is faster that way
+@opt prev is not allowed to be nullptr
+@correct 1
+@why There is no node before the first one, so the head pointer is what must be updated.
+
+@q What does prev->nextPtr = curNodePtr->nextPtr do?
+@opt Deletes curNodePtr
+@opt Makes the previous node skip over curNodePtr
+@opt Moves curNodePtr back
+@opt Swaps two nodes
+@correct 2
+@why The node before now points past the target, so the target is out of the list.
+
+@q What should you not do after delete curNodePtr?
+@opt Return from the function
+@opt Use curNodePtr to read the node again
+@opt Print a message
+@opt Assign nullptr to curNodePtr
+@correct 2
+@why The memory is gone. Reading through the old pointer is undefined behaviour.

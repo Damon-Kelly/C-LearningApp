@@ -1,0 +1,214 @@
+# Linked lists: changing the head from a function (Node**) and inserting at the end.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Insert at the end
+@summary Why a function needs Node**, and walking to the last node
+
+#---------------------------------------------------------------------------
+@page explain Why a function needs Node**
+@text
+A function that adds to a list sometimes has to change headPtr itself, for example when the list is empty and the new node becomes the first one. But arguments are copied, so a plain Node* parameter is only a copy of the caller's head pointer. Here is that mistake:
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void AddFront(Node* headPtr, int value) {
+    Node* newNode = new Node{value, headPtr};
+    headPtr = newNode;
+}
+
+int main() {
+    Node* headPtr = nullptr;
+    AddFront(headPtr, 5);
+    cout << (headPtr == nullptr ? "empty" : "not empty") << endl;
+    return 0;
+}
+@output
+empty
+@end
+@text
+AddFront changed its own copy of headPtr. The caller's pointer is still nullptr, and the new node is lost (a memory leak). To change a pointer, pass the address of that pointer, which makes the parameter a pointer to a pointer: Node**. You have met this idea in Pointers to pointers.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void AddFront(Node** ptrToHeadPtr, int value) {
+    Node* newNode = new Node{value, *ptrToHeadPtr};
+    *ptrToHeadPtr = newNode;
+}
+
+int main() {
+    Node* headPtr = nullptr;
+    AddFront(&headPtr, 5);
+    cout << (headPtr == nullptr ? "empty" : "not empty") << endl;
+    return 0;
+}
+@output
+not empty
+@end
+@text
+The caller passes &headPtr. Inside, *ptrToHeadPtr means the caller's headPtr, so reading and writing it works on the real head.
+@end
+
+#---------------------------------------------------------------------------
+@page explain InsertAtEnd
+@text
+To add at the end, you must find the last node: the one whose nextPtr is nullptr. The function has two cases. If the list is empty, the new node becomes the head. Otherwise walk to the last node and link the new one after it.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void InsertAtEnd(Node** ptrToHeadPtr, int newData) {
+    Node* newNode = new Node();
+    newNode->data = newData;
+    newNode->nextPtr = nullptr;
+    if (*ptrToHeadPtr == nullptr) {
+        *ptrToHeadPtr = newNode;
+        return;
+    }
+    Node* curNodePtr = *ptrToHeadPtr;
+    while (curNodePtr->nextPtr != nullptr) {
+        curNodePtr = curNodePtr->nextPtr;
+    }
+    curNodePtr->nextPtr = newNode;
+}
+
+int main() {
+    Node* headPtr = nullptr;
+    InsertAtEnd(&headPtr, 10);
+    InsertAtEnd(&headPtr, 20);
+    InsertAtEnd(&headPtr, 30);
+    for (Node* cur = headPtr; cur != nullptr; cur = cur->nextPtr) {
+        cout << cur->data << " ";
+    }
+    cout << endl;
+    return 0;
+}
+@output
+10 20 30
+@end
+@text
+Read it in three parts. First the new node is built with nextPtr set to nullptr, because it will be the last one. Then the empty-list case changes the real head through *ptrToHeadPtr and returns. Finally the loop moves curNodePtr along until its nextPtr is nullptr, which means it stands on the last node, and the new node is linked after it.
+@end
+@text
+The loop tests curNodePtr->nextPtr, not curNodePtr. If it tested curNodePtr and stopped at nullptr, it would have walked past the last node and have nothing left to attach the new node to.
+@end
+@text
+This function walks the whole list every time, so adding to the end of a long list is slow compared with adding to the front. Real lists often keep a second pointer to the last node to avoid the walk.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Walking to the last node
+@code cpp
+struct Node { int data;
+              Node* nextPtr; };
+Node b = {20, nullptr}, a = {10, &b};
+Node* curNodePtr = &a;
+while (curNodePtr->nextPtr != nullptr)
+    curNodePtr = curNodePtr->nextPtr;
+curNodePtr->nextPtr = new Node{30};
+@end
+@step 3
+@cell b.data int 20 1000
+@cell b.nextPtr Node* NULL 1008
+@cell a.data int 10 1016
+@cell a.nextPtr Node* ->b.data 1024
+@note The list is a (10) then b (20), so a is the first node. Node a's nextPtr points at b, and b's nextPtr is nullptr.
+@step 4
+@cell b.data int 20 1000
+@cell b.nextPtr Node* NULL 1008
+@cell a.data int 10 1016
+@cell a.nextPtr Node* ->b.data 1024
+@cell curNodePtr Node* ->a.data 1032
+@note The walker starts at the first node.
+@step 6
+@cell b.data int 20 1000
+@cell b.nextPtr Node* NULL 1008
+@cell a.data int 10 1016
+@cell a.nextPtr Node* ->b.data 1024
+@cell curNodePtr Node* ->b.data 1032
+@note a.nextPtr is not nullptr, so the loop body runs once and the walker moves to b. Now b.nextPtr is nullptr, so the test fails and the loop stops: this is the last node.
+@step 7
+@cell b.data int 20 1000
+@cell b.nextPtr Node* ->n3.data 1008
+@cell a.data int 10 1016
+@cell a.nextPtr Node* ->b.data 1024
+@cell curNodePtr Node* ->b.data 1032
+@cell n3.data int 30 5000
+@cell n3.nextPtr Node* NULL 5008
+@note A new node holding 30 is created on the heap and linked from b. The list is now 10, 20, 30.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3}, b = {2, &c}, a = {1, &b};
+int steps = 0;
+Node* cur = &a;
+while (cur->nextPtr != nullptr) {
+    cur = cur->nextPtr; steps++;
+}
+cout << steps << " " << cur->data << endl;
+@output
+2 3
+@end
+@option 3 3
+@option 2 3
+@option 2 2
+@option 3 0
+@answer 2
+@why The walker moves from a to b to c, which is 2 moves. It stops on c because c's nextPtr is nullptr, so cur->data is 3.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Why does AddFront(Node* headPtr, int value) fail to change the caller's head?
+@opt Node* cannot be changed
+@opt headPtr is a copy of the caller's pointer
+@opt new returns nullptr
+@opt Structs cannot be passed
+@correct 2
+@why Arguments are copied, so assigning to the parameter changes only the copy.
+
+@q What does the parameter type Node** mean?
+@opt A pointer to a node
+@opt A pointer to a pointer to a node
+@opt Two nodes
+@opt An array of nodes
+@correct 2
+@why It holds the address of a Node*, which lets the function change that pointer.
+
+@q Inside the function, what does *ptrToHeadPtr refer to?
+@opt The first node's data
+@opt The caller's headPtr
+@opt The new node
+@opt The address of the function
+@correct 2
+@why Following the Node** gives the Node* it points at, which is the caller's head.
+
+@q In InsertAtEnd, why does the walking loop test curNodePtr->nextPtr != nullptr?
+@opt To stop on the last node, so a new node can be attached to it
+@opt To stop after the last node
+@opt To skip the first node
+@opt To count the nodes
+@correct 1
+@why Stopping on the last node leaves a pointer that can be used to link the new node.
+
+@q Why is adding at the end of this list slower than adding at the front?
+@opt It needs to delete a node first
+@opt It has to walk the whole list to find the last node
+@opt It copies every node
+@opt It uses a bigger node
+@correct 2
+@why Inserting at the front is just two pointer changes, but the end is found by walking.

@@ -46,4 +46,12 @@
 @topic pointers_dynamic.txt | Dynamic memory | malloc, free, new and delete
 @exam exam_pointers.txt
 
-@section Linked lists and classes | Node-based lists, class lists and destructors
+@section Linked lists | Nodes, insert, delete and freeing a list in C++
+@topic list_structs.txt | Structs and -> | Grouping data in a struct, and reaching it through a pointer
+@topic list_build.txt | Building and walking a list | The head pointer, new nodes, traversal and inserting at the front
+@topic list_insert_end.txt | Insert at the end | Why a function needs Node**, and walking to the last node
+@topic list_delete.txt | Search and delete | Finding a value, unlinking a node with a prev pointer, and delete
+@topic list_free.txt | Freeing a list | Memory leaks, deleting every node, and the use-after-delete trap
+@exam exam_lists.txt
+
+@section Classes and operators | Classes, constructors, operator overloading and list classes

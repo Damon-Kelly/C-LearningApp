@@ -37,7 +37,9 @@ int main(void) {
 
 @q What does this program print?
 @code c
-int tick(void) { static int n = 0; return ++n; }
+int tick(void) {
+    static int n = 0; return ++n;
+}
 
 int main(void) {
     tick(); tick();

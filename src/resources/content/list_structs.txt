@@ -1,0 +1,223 @@
+# Linked lists: structs, pointers to structs and ->, a node that points to another node.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Structs and ->
+@summary Grouping data in a struct, and reaching it through a pointer
+
+#---------------------------------------------------------------------------
+@page explain Grouping data with struct
+@text
+A struct is a type you design yourself. It bundles several named fields, called members, into one value. Each member has its own type, and you reach a member with a dot.
+@end
+@code cpp
+struct Student {
+    string name;
+    int mark;
+};
+
+int main() {
+    Student s;
+    s.name = "Ana";
+    s.mark = 72;
+    cout << s.name << " " << s.mark << endl;
+    return 0;
+}
+@output
+Ana 72
+@end
+@text
+In C++ you can write Student s; without repeating the word struct. The definition ends with a semicolon after the closing brace, which is easy to forget.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Initialising and copying
+@text
+List the values in braces, in member order, to initialise a struct. Assigning one struct to another copies every member, so the two variables are independent afterwards.
+@end
+@code cpp
+struct Point {
+    int x;
+    int y;
+};
+
+int main() {
+    Point p = {3, 4};
+    Point q = p;
+    q.x = 10;
+    cout << p.x << " " << q.x << endl;
+    return 0;
+}
+@output
+3 10
+@end
+@text
+q got a copy of p. Changing q.x left p.x alone. Remember this when a struct is passed to a function by value: the function works on a copy of the whole struct.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Pointers to structs
+@text
+A pointer can hold the address of a struct. To reach a member through the pointer you could write (*ptr).x, but C++ has a shorthand: ptr->x. Use the dot on a struct variable and the arrow on a pointer to a struct.
+@end
+@code cpp
+struct Point {
+    int x;
+    int y;
+};
+
+int main() {
+    Point p = {3, 4};
+    Point *ptr = &p;
+    cout << (*ptr).x << " " << ptr->x << endl;
+    ptr->y = 9;
+    cout << p.y << endl;
+    return 0;
+}
+@output
+3 3
+9
+@end
+@text
+Both forms read the same member. ptr->y = 9 changed the real p, because ptr holds p's address. Structs are often created on the heap with new, and then a pointer is the only way to reach them.
+@end
+@code cpp
+struct Point {
+    int x;
+    int y;
+};
+
+int main() {
+    Point *np = new Point;
+    np->x = 5;
+    np->y = 6;
+    cout << np->x + np->y << endl;
+    delete np;
+    return 0;
+}
+@output
+11
+@end
+
+#---------------------------------------------------------------------------
+@page explain A struct that points to another struct
+@text
+A struct may contain a pointer to its own type. That is the key idea behind a linked list: each Node holds a value and a pointer to the next Node. A pointer set to nullptr means "points to nothing", which marks the end of the chain.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+int main() {
+    Node a = {10, nullptr};
+    Node b = {20, nullptr};
+    a.nextPtr = &b;
+    cout << a.nextPtr->data << endl;
+    return 0;
+}
+@output
+20
+@end
+@text
+a.nextPtr->data reads left to right: take a, follow its nextPtr to the next node, then read data there. A Node cannot contain another Node inside itself (that would be infinitely large), but it can contain a pointer to one.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Two nodes, linked
+@code cpp
+struct Node { int data;
+              Node* nextPtr; };
+Node a = {10, nullptr};
+Node b = {20, nullptr};
+a.nextPtr = &b;
+cout << a.nextPtr->data;
+@end
+@step 3
+@cell a.data int 10 1000
+@cell a.nextPtr Node* NULL 1008
+@note Node a is created. Its pointer member is nullptr, shown as NULL here: it points at nothing yet.
+@step 4
+@cell a.data int 10 1000
+@cell a.nextPtr Node* NULL 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* NULL 1024
+@note Node b is created the same way, after a in memory.
+@step 5
+@cell a.data int 10 1000
+@cell a.nextPtr Node* ->b.data 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* NULL 1024
+@note a.nextPtr = &b stores b's address in a. The address of a struct is the address of its first member. The two nodes are now linked.
+@step 6
+@cell a.data int 10 1000
+@cell a.nextPtr Node* ->b.data 1008
+@cell b.data int 20 1016
+@cell b.nextPtr Node* NULL 1024
+@note a.nextPtr->data follows the arrow from a to b and reads b.data, so 20 is printed.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Point { int x; int y; };
+Point p = {1, 2};
+Point *ptr = &p;
+ptr->x = ptr->y + 5;
+Point q = p;
+q.y = 0;
+cout << p.x << " " << p.y << " ";
+cout << q.x << " " << q.y << endl;
+@output
+7 2 7 0
+@end
+@option 7 0 7 0
+@option 7 2 7 2
+@option 7 2 7 0
+@option 1 2 1 0
+@answer 3
+@why ptr->x = ptr->y + 5 changes p.x to 2 + 5 = 7. q is then a copy of p, holding 7 and 2. Setting q.y to 0 changes only the copy, so p stays 7 and 2.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which expression reads member x through a pointer p to a struct?
+@opt p.x
+@opt p->x
+@opt p::x
+@opt p>x
+@correct 2
+@why The arrow follows the pointer and then selects the member. It is short for (*p).x.
+
+@q After Point q = p; q.x = 10; what happens to p.x?
+@opt It becomes 10
+@opt It is unchanged
+@opt It becomes 0
+@opt It does not compile
+@correct 2
+@why Assigning a struct copies all its members, so q and p are independent.
+
+@q What does a pointer value of nullptr mean?
+@opt It points at the first node
+@opt It points at nothing
+@opt It points at address 1
+@opt It is uninitialised
+@correct 2
+@why nullptr is the special value for "no object". In a list it marks the end.
+
+@q Why can a Node contain a Node* but not another Node?
+@opt Pointers are smaller, so the struct has a fixed size
+@opt Structs cannot contain pointers
+@opt A Node inside a Node would make it infinitely large
+@opt Both are allowed in the same way
+@correct 3
+@why A struct holding a copy of itself would be infinitely big. A pointer has a fixed size, so it is fine.
+
+@q What do you write on a struct variable (not a pointer) to reach a member?
+@opt ->
+@opt .
+@opt ::
+@opt *
+@correct 2
+@why A dot is for a struct variable. An arrow is for a pointer to a struct.

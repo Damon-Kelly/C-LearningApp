@@ -1,0 +1,211 @@
+# Linked lists: memory leaks and freeing a whole list.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Freeing a list
+@summary Memory leaks, deleting every node, and the use-after-delete trap
+
+#---------------------------------------------------------------------------
+@page explain Every new needs a delete
+@text
+Each node was created with new, so each one must be deleted exactly once. Memory you forget to delete is a memory leak: it stays reserved until the program ends and cannot be reused. A program that leaks in a loop can eventually run out of memory.
+@end
+@text
+Lists leak easily. If you only delete the head node, the rest of the nodes are still on the heap, but nothing points at them any more. The same happens if you simply assign headPtr = nullptr: the pointer is cleared, but the nodes are not given back.
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+
+int main() {
+    Node* headPtr = new Node{1, new Node{2, nullptr}};
+    // WRONG: only the first node is freed, the second one leaks
+    delete headPtr;
+    headPtr = nullptr;
+    return 0;
+}
+@end
+@text
+Freeing a list means visiting every node and deleting each one.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Deleting every node
+@text
+Walk the list as usual, but before deleting a node, step the walker forward. After the delete the node's memory is gone, so you can no longer read its nextPtr.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void FreeList(Node** ptrToHeadPtr) {
+    Node* curNodePtr = *ptrToHeadPtr;
+    while (curNodePtr != nullptr) {
+        Node* tempPtr = curNodePtr;
+        curNodePtr = curNodePtr->nextPtr;
+        delete tempPtr;
+    }
+    *ptrToHeadPtr = nullptr;
+}
+
+int main() {
+    Node* headPtr = new Node{1, new Node{2, new Node{3, nullptr}}};
+    FreeList(&headPtr);
+    cout << (headPtr == nullptr) << endl;
+    return 0;
+}
+@output
+1
+@end
+@text
+tempPtr remembers the node to delete while curNodePtr moves ahead. At the end *ptrToHeadPtr is set to nullptr so the caller's head does not keep pointing at memory that no longer exists. That is why the function takes Node**.
+@end
+
+#---------------------------------------------------------------------------
+@page explain The classic mistake
+@text
+The tempting version deletes the node and then reads from it. It compiles, and it may even seem to work, but it uses memory that has been given back, which is undefined behaviour.
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+
+void BadFree(Node* headPtr) {
+    Node* curNodePtr = headPtr;
+    while (curNodePtr != nullptr) {
+        delete curNodePtr;
+        curNodePtr = curNodePtr->nextPtr;   // BUG: curNodePtr was just deleted
+    }
+}
+
+int main() { return 0; }
+@end
+@text
+After delete curNodePtr, the node no longer belongs to you, yet the next line reads its nextPtr. Always save the next pointer before the delete, as FreeList does.
+@end
+@text
+Related rules: never delete the same node twice, never use a pointer after deleting what it points at, and set a pointer to nullptr after freeing when it will live on. Tools such as Valgrind or the compiler's address sanitiser find these problems automatically.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Freeing two nodes
+@code cpp
+struct Node { int data;
+              Node* nextPtr; };
+Node* cur = new Node{1, new Node{2}};
+while (cur != nullptr) {
+    Node* tempPtr = cur;
+    cur = cur->nextPtr;
+    delete tempPtr;
+}
+@end
+@step 3
+@cell cur Node* ->n1.data 1000
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* ->n2.data 5008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note cur starts at the first of two nodes.
+@step 5
+@cell cur Node* ->n1.data 1000
+@cell tempPtr Node* ->n1.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* ->n2.data 5008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note tempPtr remembers the node about to be deleted.
+@step 6
+@cell cur Node* ->n2.data 1000
+@cell tempPtr Node* ->n1.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* ->n2.data 5008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note cur moves ahead to the second node while the first still exists, so its nextPtr can be read.
+@step 7
+@cell cur Node* ->n2.data 1000
+@cell tempPtr Node* 5000 1008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note delete tempPtr frees the first node. tempPtr still holds the old address 5000, but it is dangling and must not be used.
+@step 5
+@cell cur Node* ->n2.data 1000
+@cell tempPtr Node* ->n2.data 1008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note Second pass: tempPtr now remembers the second node.
+@step 6
+@cell cur Node* NULL 1000
+@cell tempPtr Node* ->n2.data 1008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* NULL 5024
+@note cur takes the second node's nextPtr, which is nullptr. The loop is about to end.
+@step 7
+@cell cur Node* NULL 1000
+@cell tempPtr Node* 5016 1008
+@note The second node is freed. Both nodes are gone and nothing leaked.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* h = new Node{1, new Node{2, new Node{3}}};
+int freed = 0;
+while (h != nullptr) {
+    Node* t = h; h = h->nextPtr;
+    delete t; freed++;
+}
+cout << freed << " " << (h == nullptr) << endl;
+@output
+3 1
+@end
+@option 3 0
+@option 2 1
+@option 0 1
+@option 3 1
+@answer 4
+@why The loop deletes one node per pass, so 3 passes make freed equal 3. It only stops when headPtr is nullptr, so the second value is 1 (true).
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What is a memory leak?
+@opt Using too many variables
+@opt Memory that was allocated but is never given back
+@opt Reading outside an array
+@opt A pointer that is nullptr
+@correct 2
+@why Leaked memory stays reserved until the program ends because nothing frees it.
+
+@q A list has 5 nodes. What does delete headPtr; headPtr = nullptr; do to the list?
+@opt Frees all 5 nodes
+@opt Frees only the first node and leaks the other 4
+@opt Frees nothing
+@opt Frees the last node
+@correct 2
+@why delete frees one node. The remaining nodes still exist but are unreachable.
+
+@q In a loop that frees a list, why must the next pointer be saved before delete?
+@opt delete is slow
+@opt After delete the node's memory is invalid, so its nextPtr cannot be read
+@opt The next pointer is cleared by the compiler
+@opt To avoid compile errors
+@correct 2
+@why Reading from a deleted node is undefined behaviour.
+
+@q Why does FreeList set *ptrToHeadPtr = nullptr at the end?
+@opt So the caller's head does not point at freed memory
+@opt To save memory
+@opt To delete the last node
+@opt It is required by new
+@correct 1
+@why Otherwise the caller's head would be a dangling pointer to a deleted node.
+
+@q Which of these is a mistake?
+@opt Deleting every node exactly once
+@opt Deleting the same node twice
+@opt Setting a pointer to nullptr after freeing
+@opt Saving the next pointer before delete
+@correct 2
+@why A double delete is undefined behaviour and can crash the program.
