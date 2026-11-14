@@ -1,0 +1,305 @@
+# Classes: the doubly linked list.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Doubly linked lists
+@summary Nodes with prevPointer and nextPointer, and inserting at the start, end and a position
+
+#---------------------------------------------------------------------------
+@page explain Two pointers per node
+@text
+In a doubly linked list every node points both ways: nextPointer to the following node and prevPointer to the one before it. The first node's prevPointer and the last node's nextPointer are nullptr. You can walk the list in either direction.
+@end
+@code cpp
+class DoublyLinkedNode {
+public:
+    int data;
+    DoublyLinkedNode* prevPointer;
+    DoublyLinkedNode* nextPointer;
+    DoublyLinkedNode(int v)
+        : data(v), prevPointer(nullptr), nextPointer(nullptr) {}
+};
+
+int main() {
+    DoublyLinkedNode* a = new DoublyLinkedNode(1);
+    DoublyLinkedNode* b = new DoublyLinkedNode(2);
+    a->nextPointer = b;
+    b->prevPointer = a;
+    cout << a->nextPointer->data << " " << b->prevPointer->data << endl;
+    delete a;
+    delete b;
+    return 0;
+}
+@output
+2 1
+@end
+@text
+Linking two nodes now takes two assignments, one in each direction. That is the price of a doubly linked list: every insert and delete has to keep both directions consistent. In return you can step backwards, and deleting a node no longer needs a separate prev variable because the node already knows its neighbour.
+@end
+
+#---------------------------------------------------------------------------
+@page explain InsertAtBeginning and InsertAtEnd
+@text
+Inserting at the beginning sets up the new node first, then fixes the old first node's prevPointer, then moves the head. The empty list needs care: there is no old first node to fix.
+@end
+@code cpp
+class DoublyLinkedNode {
+public:
+    int data;
+    DoublyLinkedNode* prevPointer;
+    DoublyLinkedNode* nextPointer;
+    DoublyLinkedNode(int v)
+        : data(v), prevPointer(nullptr), nextPointer(nullptr) {}
+};
+
+class DoublyLinkedList {
+    DoublyLinkedNode* head = nullptr;
+public:
+    ~DoublyLinkedList() {
+        while (head) {
+            DoublyLinkedNode* temp = head;
+            head = head->nextPointer;
+            delete temp;
+        }
+    }
+    void InsertAtBeginning(int value) {
+        DoublyLinkedNode* newNode = new DoublyLinkedNode(value);
+        newNode->nextPointer = head;
+        if (head != nullptr) {
+            head->prevPointer = newNode;
+        }
+        head = newNode;
+    }
+    void InsertAtEnd(int value) {
+        DoublyLinkedNode* newNode = new DoublyLinkedNode(value);
+        if (head == nullptr) {
+            head = newNode;
+            return;
+        }
+        DoublyLinkedNode* current = head;
+        while (current->nextPointer != nullptr) {
+            current = current->nextPointer;
+        }
+        current->nextPointer = newNode;
+        newNode->prevPointer = current;
+    }
+    void PrintBothWays() const {
+        DoublyLinkedNode* current = head;
+        DoublyLinkedNode* last = nullptr;
+        while (current != nullptr) {
+            cout << current->data << " ";
+            last = current;
+            current = current->nextPointer;
+        }
+        cout << "| ";
+        while (last != nullptr) {
+            cout << last->data << " ";
+            last = last->prevPointer;
+        }
+        cout << endl;
+    }
+};
+
+int main() {
+    DoublyLinkedList list;
+    list.InsertAtEnd(2);
+    list.InsertAtEnd(3);
+    list.InsertAtBeginning(1);
+    list.PrintBothWays();
+    return 0;
+}
+@output
+1 2 3 | 3 2 1
+@end
+@text
+InsertAtEnd is the singly linked version plus one extra line: newNode->prevPointer = current links the new node back to the old last node. PrintBothWays walks forward to the end, then uses the prevPointers to walk back. If any prevPointer were missing, the backward walk would stop early, which makes it a handy test.
+@end
+@text
+Many doubly linked lists also keep a tail pointer to the last node, so InsertAtEnd does not have to walk. The exam prep only asks for the node pointers, so this version keeps just head.
+@end
+
+#---------------------------------------------------------------------------
+@page explain InsertAtPosition
+@text
+InsertAtPosition puts a value at a given index. Here positions count from 0, so position 0 means "at the beginning". The function walks to the node just before the position, then splices the new node in, fixing four pointers.
+@end
+@code cpp
+class DoublyLinkedNode {
+public:
+    int data;
+    DoublyLinkedNode* prevPointer;
+    DoublyLinkedNode* nextPointer;
+    DoublyLinkedNode(int v)
+        : data(v), prevPointer(nullptr), nextPointer(nullptr) {}
+};
+
+class DoublyLinkedList {
+    DoublyLinkedNode* head = nullptr;
+public:
+    ~DoublyLinkedList() {
+        while (head) {
+            DoublyLinkedNode* t = head;
+            head = head->nextPointer;
+            delete t;
+        }
+    }
+    void InsertAtBeginning(int value) {
+        DoublyLinkedNode* newNode = new DoublyLinkedNode(value);
+        newNode->nextPointer = head;
+        if (head) head->prevPointer = newNode;
+        head = newNode;
+    }
+    void InsertAtPosition(int value, int position) {
+        if (position <= 0 || head == nullptr) {
+            InsertAtBeginning(value);
+            return;
+        }
+        DoublyLinkedNode* before = head;
+        int i = 0;
+        while (i < position - 1 && before->nextPointer != nullptr) {
+            before = before->nextPointer;
+            i++;
+        }
+        DoublyLinkedNode* newNode = new DoublyLinkedNode(value);
+        DoublyLinkedNode* after = before->nextPointer;
+        newNode->prevPointer = before;
+        newNode->nextPointer = after;
+        before->nextPointer = newNode;
+        if (after != nullptr) {
+            after->prevPointer = newNode;
+        }
+    }
+    void Print() const {
+        for (DoublyLinkedNode* c = head; c; c = c->nextPointer)
+            cout << c->data << " ";
+        cout << endl;
+    }
+};
+
+int main() {
+    DoublyLinkedList list;
+    list.InsertAtPosition(10, 0);
+    list.InsertAtPosition(30, 1);
+    list.InsertAtPosition(20, 1);
+    list.InsertAtPosition(40, 99);
+    list.Print();
+    return 0;
+}
+@output
+10 20 30 40
+@end
+@text
+The four pointer updates are the heart of it: the new node points back to before and forward to after, before points forward to the new node, and after (if there is one) points back to it. Position 0 is handed to InsertAtBeginning because the head must change. A position past the end stops the walk at the last node, so the value is appended.
+@end
+@text
+Your exam prep does not say whether positions start at 0 or 1. Either is fine as long as you state it and handle position 0 (or 1) as the beginning.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Linking two nodes both ways
+@code cpp
+struct DNode { int data;
+  DNode *prevPointer, *nextPointer; };
+DNode a = {1}, b = {2};
+a.nextPointer = &b;
+b.prevPointer = &a;
+DNode* head = &a;
+@end
+@step 3
+@cell a.data int 1 1000
+@cell a.prevPointer DNode* NULL 1008
+@cell a.nextPointer DNode* NULL 1016
+@cell b.data int 2 1024
+@cell b.prevPointer DNode* NULL 1032
+@cell b.nextPointer DNode* NULL 1040
+@note Two separate nodes. DNode is short for DoublyLinkedNode here. Members not listed in the braces start as nullptr.
+@step 4
+@cell a.data int 1 1000
+@cell a.prevPointer DNode* NULL 1008
+@cell a.nextPointer DNode* ->b.data 1016
+@cell b.data int 2 1024
+@cell b.prevPointer DNode* NULL 1032
+@cell b.nextPointer DNode* NULL 1040
+@note The forward link: a now points at b.
+@step 5
+@cell a.data int 1 1000
+@cell a.prevPointer DNode* NULL 1008
+@cell a.nextPointer DNode* ->b.data 1016
+@cell b.data int 2 1024
+@cell b.prevPointer DNode* ->a.data 1032
+@cell b.nextPointer DNode* NULL 1040
+@note The backward link: b points back at a. Every link in a doubly linked list needs both of these.
+@step 6
+@cell head DNode* ->a.data 1048
+@cell a.data int 1 1000
+@cell a.prevPointer DNode* NULL 1008
+@cell a.nextPointer DNode* ->b.data 1016
+@cell b.data int 2 1024
+@cell b.prevPointer DNode* ->a.data 1032
+@cell b.nextPointer DNode* NULL 1040
+@note head points at the first node. The first prevPointer and the last nextPointer are nullptr, marking both ends.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct D { int data; D *prev, *next; };
+D a = {1}, b = {2}, c = {3};
+a.next = &b; b.next = &c;
+b.prev = &a; c.prev = &b;
+D* p = &c;
+p = p->prev;
+cout << p->data << p->next->data;
+cout << p->prev->data << endl;
+@output
+231
+@end
+@option 213
+@option 231
+@option 321
+@option 123
+@answer 2
+@why p starts at c and moves back to b. Then p->data is 2, p->next is c (3) and p->prev is a (1).
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does each node of a doubly linked list hold?
+@opt Data and one pointer
+@opt Data, a pointer to the next node and a pointer to the previous node
+@opt Two data values
+@opt A pointer to the head and the tail
+@correct 2
+@why The extra prevPointer is what lets you walk backwards.
+
+@q What is the first node's prevPointer?
+@opt The last node
+@opt nullptr
+@opt The head
+@opt Itself
+@correct 2
+@why Nothing comes before the first node, so its prevPointer is nullptr.
+
+@q In InsertAtBeginning, why is head->prevPointer = newNode inside if (head != nullptr)?
+@opt An empty list has no old first node to update
+@opt It is faster that way
+@opt prevPointer cannot point at new nodes
+@opt It is not needed at all
+@correct 1
+@why Writing through a null head would crash.
+
+@q What line does InsertAtEnd need that the singly linked version does not?
+@opt current->nextPointer = newNode;
+@opt newNode->prevPointer = current;
+@opt head = newNode;
+@opt delete current;
+@correct 2
+@why The new last node must point back to the old last node.
+
+@q How many pointers change when inserting a node between two existing nodes?
+@opt 1
+@opt 2
+@opt 4
+@opt 6
+@correct 3
+@why The new node's two pointers, plus before->nextPointer and after->prevPointer.

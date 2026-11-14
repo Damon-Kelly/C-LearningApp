@@ -1,0 +1,299 @@
+# Classes: the linked list as a class (Node and LinkedList).
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic A LinkedList class
+@summary Wrapping the list in a class, with a constructor, destructor and member functions
+
+#---------------------------------------------------------------------------
+@page explain Why put the list in a class?
+@text
+In the Linked lists section, every function needed a Node** to change the head, and it was the user's job to call FreeList. Wrapping the list in a class solves both problems. The head becomes a private data member, so member functions can change it directly, and the destructor frees the nodes automatically.
+@end
+@text
+This is the version from your lecture notes. Node becomes a small class with a constructor, so new Node(value) sets the data and makes next nullptr in one step.
+@end
+@code cpp
+class Node {
+public:
+    int data;
+    Node* next;
+    Node(int value) {
+        data = value;
+        next = nullptr;
+    }
+};
+
+class LinkedList {
+private:
+    Node* head;
+public:
+    LinkedList() { head = nullptr; }
+    ~LinkedList() { clear(); }
+
+    void insertAtBeginning(int newData) {
+        Node* newNode = new Node(newData);
+        newNode->next = head;
+        head = newNode;
+    }
+
+    void insertAtEnd(int newData) {
+        Node* newNode = new Node(newData);
+        if (head == nullptr) {
+            head = newNode;
+            return;
+        }
+        Node* current = head;
+        while (current->next != nullptr) {
+            current = current->next;
+        }
+        current->next = newNode;
+    }
+
+    void display() const {
+        Node* current = head;
+        while (current != nullptr) {
+            cout << current->data << " ";
+            current = current->next;
+        }
+        cout << endl;
+    }
+
+    void clear() {
+        Node* current = head;
+        while (current != nullptr) {
+            Node* temp = current;
+            current = current->next;
+            delete temp;
+        }
+        head = nullptr;
+    }
+};
+
+int main() {
+    LinkedList list;
+    list.insertAtEnd(20);
+    list.insertAtEnd(30);
+    list.insertAtBeginning(10);
+    list.display();
+    return 0;
+}
+@output
+10 20 30
+@end
+@text
+Compare insertAtEnd with the Node** version: no ptrToHeadPtr, no *. The function is a member, so it simply writes head = newNode. main never sees a pointer at all.
+@end
+
+#---------------------------------------------------------------------------
+@page explain The destructor does the cleanup
+@text
+The destructor calls clear, which is the same delete-every-node loop as FreeList. Because destructors run automatically, a LinkedList object can never leak its nodes: when list goes out of scope at the end of main, every node is freed.
+@end
+@code cpp
+class Node {
+public:
+    int data;
+    Node* next;
+    Node(int v) : data(v), next(nullptr) {}
+};
+
+class LinkedList {
+    Node* head = nullptr;
+public:
+    ~LinkedList() {
+        int n = 0;
+        while (head != nullptr) {
+            Node* temp = head;
+            head = head->next;
+            delete temp;
+            n++;
+        }
+        cout << "freed " << n << " nodes" << endl;
+    }
+    void insertAtBeginning(int v) {
+        Node* newNode = new Node(v);
+        newNode->next = head;
+        head = newNode;
+    }
+};
+
+int main() {
+    {
+        LinkedList list;
+        list.insertAtBeginning(1);
+        list.insertAtBeginning(2);
+        list.insertAtBeginning(3);
+    }
+    cout << "after the block" << endl;
+    return 0;
+}
+@output
+freed 3 nodes
+after the block
+@end
+@text
+Nobody called a free function; leaving the braces destroyed list, and its destructor did the work. This pattern, where an object owns a resource and releases it in its destructor, is one of the most important ideas in C++.
+@end
+
+#---------------------------------------------------------------------------
+@page explain deleteWithValue as a member
+@text
+The search-and-delete logic is the same as before: handle the empty list, handle the head separately, then walk with a pointer one step behind. The only change is that head is a member instead of *ptrToHeadPtr.
+@end
+@code cpp
+class Node {
+public:
+    int data;
+    Node* next;
+    Node(int v) : data(v), next(nullptr) {}
+};
+
+class LinkedList {
+    Node* head = nullptr;
+public:
+    ~LinkedList() {
+        while (head) { Node* t = head; head = head->next; delete t; }
+    }
+    void insertAtEnd(int v) {
+        Node* n = new Node(v);
+        if (!head) { head = n; return; }
+        Node* cur = head;
+        while (cur->next) cur = cur->next;
+        cur->next = n;
+    }
+    void deleteWithValue(int value) {
+        if (head == nullptr) return;
+        if (head->data == value) {
+            Node* temp = head;
+            head = head->next;
+            delete temp;
+            return;
+        }
+        Node* current = head;
+        while (current->next != nullptr && current->next->data != value) {
+            current = current->next;
+        }
+        if (current->next != nullptr) {
+            Node* temp = current->next;
+            current->next = current->next->next;
+            delete temp;
+        }
+    }
+    void display() const {
+        for (Node* c = head; c; c = c->next) cout << c->data << " ";
+        cout << endl;
+    }
+};
+
+int main() {
+    LinkedList list;
+    for (int v = 1; v <= 4; v++) list.insertAtEnd(v);
+    list.deleteWithValue(3);
+    list.deleteWithValue(1);
+    list.display();
+    return 0;
+}
+@output
+2 4
+@end
+@text
+This version looks one node ahead (current->next->data) instead of keeping a separate prev pointer. current stops on the node before the one to delete, so it can relink past it. Both styles are correct; use whichever you find easier to reason about.
+@end
+
+#---------------------------------------------------------------------------
+@page trace insertAtBeginning inside the class
+@code cpp
+class Node { public: int data;
+    Node* next; };
+Node* head = nullptr;
+Node* nn = new Node{5, nullptr};
+nn->next = head;
+head = nn;
+@end
+@step 3
+@cell head Node* NULL 1000
+@note A new LinkedList object starts with head set to nullptr by its constructor. Here head is shown as a plain variable.
+@step 4
+@cell head Node* NULL 1000
+@cell nn Node* ->n.data 1008
+@cell n.data int 5 5000
+@cell n.next Node* NULL 5008
+@note new Node creates the node on the heap.
+@step 5
+@cell head Node* NULL 1000
+@cell nn Node* ->n.data 1008
+@cell n.data int 5 5000
+@cell n.next Node* NULL 5008
+@note newNode->next = head copies nullptr, because the list was empty.
+@step 6
+@cell head Node* ->n.data 1000
+@cell nn Node* ->n.data 1008
+@cell n.data int 5 5000
+@cell n.next Node* NULL 5008
+@note head = newNode. Because head is a data member, the function changes it directly. No Node** was needed.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Node { int data; Node* next; };
+class List { Node* head = nullptr;
+public:
+  void front(int v) { head = new Node{v, head}; }
+  int first() const { return head->data; } };
+List l;
+l.front(4); l.front(8); l.front(1);
+cout << l.first() << endl;
+@output
+1
+@end
+@option 4
+@option 8
+@option 1
+@option 13
+@answer 3
+@why Each value goes in front of the others, so the last one added, 1, is at the head.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Why do LinkedList member functions not need a Node** parameter?
+@opt head is a data member, so member functions can change it directly
+@opt Classes cannot use pointers to pointers
+@opt The list is copied each time
+@opt head is global
+@correct 1
+@why A member function works on the object's own head, not on a copy of it.
+
+@q Why does ~LinkedList() call clear()?
+@opt To print the list
+@opt So that every node is freed automatically when the list object is destroyed
+@opt To reset head without deleting nodes
+@opt It is required for every class
+@correct 2
+@why The destructor runs automatically, so the user cannot forget to free the nodes.
+
+@q What does the Node constructor Node(int value) do in the lecture version?
+@opt Sets data to value and next to nullptr
+@opt Inserts the node into the list
+@opt Deletes the next node
+@opt Prints the value
+@correct 1
+@why It gives every new node a valid starting state in one step.
+
+@q In the deleteWithValue that looks ahead, where does current stop?
+@opt On the node to delete
+@opt On the node before the one to delete
+@opt On the last node
+@opt On the head always
+@correct 2
+@why Stopping one node early lets it relink current->next past the deleted node.
+
+@q When is the destructor of a local LinkedList list; called?
+@opt When the block containing list ends
+@opt When clear() is called
+@opt When the list becomes empty
+@opt Never automatically
+@correct 1
+@why Local objects are destroyed at the end of their scope, and the destructor runs then.

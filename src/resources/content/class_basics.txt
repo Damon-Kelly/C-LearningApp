@@ -1,0 +1,211 @@
+# Classes: members, methods, public and private.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Classes and objects
+@summary Data members, member functions, public and private, setters and getters
+
+#---------------------------------------------------------------------------
+@page explain From struct to class
+@text
+A class is a type that bundles data and the functions that work on that data. The data are called data members and the functions are called member functions (or methods). A variable of a class type is called an object.
+@end
+@code cpp
+class Box {
+public:
+    double length;
+    double width;
+
+    double area() {
+        return length * width;
+    }
+};
+
+int main() {
+    Box b;
+    b.length = 3.0;
+    b.width = 4.0;
+    cout << b.area() << endl;
+    return 0;
+}
+@output
+12
+@end
+@text
+You call a member function with a dot, just like reading a member: b.area(). Inside area, the names length and width mean the members of the object it was called on, so the same function gives different answers for different boxes.
+@end
+@text
+In C++ the only difference between struct and class is the default access: members of a struct are public unless you say otherwise, and members of a class are private. By convention, struct is used for plain data (like a list Node) and class for types with behaviour.
+@end
+
+#---------------------------------------------------------------------------
+@page explain public and private
+@text
+public members can be used from anywhere. private members can only be used by the class's own member functions. Making the data private and offering public functions to work with it is called encapsulation: the class controls how its data may change.
+@end
+@code cpp
+class Box {
+private:
+    double length = 1.0;
+
+public:
+    void setLength(double len) {
+        if (len > 0) {
+            length = len;
+        }
+    }
+    double getLength() {
+        return length;
+    }
+};
+
+int main() {
+    Box b;
+    b.setLength(5.0);
+    b.setLength(-2.0);
+    cout << b.getLength() << endl;
+    return 0;
+}
+@output
+5
+@end
+@text
+The setter refuses the negative length, so the box keeps 5. Code outside the class cannot write b.length = -2.0; the compiler reports an error because length is private. That is the point: every change has to go through setLength, which checks it.
+@end
+@text
+Functions like setLength and getLength are called setters and getters (or mutators and accessors).
+@end
+
+#---------------------------------------------------------------------------
+@page explain Defining member functions outside the class
+@text
+For longer functions, you can declare them inside the class and define them afterwards. The definition uses the class name and the scope operator :: to say which class the function belongs to.
+@end
+@code cpp
+class Box {
+private:
+    double length, width, height;
+
+public:
+    void set(double l, double w, double h);
+    double getVolume();
+};
+
+void Box::set(double l, double w, double h) {
+    length = l;
+    width = w;
+    height = h;
+}
+
+double Box::getVolume() {
+    return length * width * height;
+}
+
+int main() {
+    Box b1, b2;
+    b1.set(2, 3, 4);
+    b2.set(1, 1, 10);
+    cout << b1.getVolume() << " " << b2.getVolume() << endl;
+    return 0;
+}
+@output
+24 10
+@end
+@text
+Box::getVolume reads "getVolume, which belongs to Box". Each object has its own copy of the data members, so b1 and b2 have separate lengths, widths and heights, but they share the one copy of the code.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Two objects, one class
+@code cpp
+class Box { public:
+    int len, wid; };
+Box a;
+a.len = 2; a.wid = 3;
+Box b = a;
+b.len = 10;
+@end
+@step 3
+@cell a.len int ? 1000
+@cell a.wid int ? 1004
+@note Object a is created. It has its own len and wid, not set yet.
+@step 4
+@cell a.len int 2 1000
+@cell a.wid int 3 1004
+@note Both members of a are set.
+@step 5
+@cell a.len int 2 1000
+@cell a.wid int 3 1004
+@cell b.len int 2 1008
+@cell b.wid int 3 1012
+@note b is a new object, initialised as a copy of a. It has separate memory at 1008.
+@step 6
+@cell a.len int 2 1000
+@cell a.wid int 3 1004
+@cell b.len int 10 1008
+@cell b.wid int 3 1012
+@note Changing b.len does not touch a. Objects copy like structs: every member is copied.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+class Counter { int n = 0;
+public:
+    void add(int k) { if (k > 0) n += k; }
+    int get() { return n; } };
+Counter c;
+c.add(5); c.add(-3); c.add(2);
+cout << c.get() << endl;
+@output
+7
+@end
+@option 4
+@option 7
+@option 5
+@option 0
+@answer 2
+@why add ignores the negative amount, so only 5 and 2 are added. n starts at 0 and ends at 7.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What is an object?
+@opt A function inside a class
+@opt A variable whose type is a class
+@opt A private data member
+@opt A header file
+@correct 2
+@why The class is the type, and each object is one variable of that type with its own data.
+
+@q Who can use a private data member?
+@opt Any code in the program
+@opt Only main
+@opt Only the class's own member functions
+@opt Nobody, it is read-only
+@correct 3
+@why private hides the member from outside code. Public member functions can still use it.
+
+@q What is the default access for members of a class (not a struct)?
+@opt public
+@opt private
+@opt protected
+@opt There is no default
+@correct 2
+@why class defaults to private and struct defaults to public. That is the only difference between them.
+
+@q What does the line double Box::getVolume() { ... } mean?
+@opt It defines getVolume as a member of Box, outside the class body
+@opt It calls getVolume on a Box
+@opt It creates a Box named getVolume
+@opt It is a syntax error
+@correct 1
+@why The scope operator :: ties the function definition to the class it belongs to.
+
+@q Why give a class private data and a public setter?
+@opt Setters are faster than direct access
+@opt So the class can check or control every change to its data
+@opt Private members use less memory
+@opt It is required for every class
+@correct 2
+@why Encapsulation: the only way to change the value is through code the class wrote, which can reject bad values.

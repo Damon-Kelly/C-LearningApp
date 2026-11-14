@@ -1,0 +1,342 @@
+# Section exam for "Classes and operators".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Classes and operators exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q What is the default access level of members declared in a class?
+@opt public
+@opt private
+@opt protected
+@opt There is no default
+@correct 2
+@why class members are private by default. struct members are public by default.
+
+@q What does this program print?
+@code cpp
+class Acc { int bal = 0;
+public:
+    void dep(int a) { if (a > 0) bal += a; }
+    int get() const { return bal; } };
+Acc x;
+x.dep(10); x.dep(-4); x.dep(5);
+cout << x.get() << endl;
+@end
+@opt 11
+@opt 15
+@opt 10
+@opt 0
+@correct 2
+@why The negative deposit is rejected, so 10 + 5 = 15.
+
+@q What does this program print?
+@code cpp
+struct T { char c;
+    T(char x) : c(x) { cout << c; }
+    ~T() { cout << c; } };
+int main() {
+    T a('X');
+    { T b('Y'); }
+}
+@end
+@opt XYYX
+@opt XYXY
+@opt XY
+@opt XXYY
+@correct 1
+@why X is made, Y is made and destroyed at its closing brace, then X is destroyed at the end of main.
+
+@q A class has only the constructor Box(double l, double w). What happens with Box b; ?
+@opt b gets zero sizes
+@opt Compile error: there is no default constructor
+@opt The compiler adds one automatically
+@opt b is a null pointer
+@correct 2
+@why Once any constructor is written, the compiler no longer supplies a default one.
+
+@q What does this program print?
+@code cpp
+class Clock { public: int h, m;
+  Clock(int a = 12, int b = 0) : h(a), m(b) {} };
+Clock c1, c2(7);
+cout << c1.h << ":" << c1.m << " ";
+cout << c2.h << ":" << c2.m << endl;
+@end
+@opt 12:0 7:0
+@opt 0:0 7:0
+@opt 12:0 7:12
+@opt 12:0 12:7
+@correct 1
+@why c1 uses both defaults. c2 gives h = 7 and uses the default m = 0.
+
+@q Inside a member function, what is this?
+@opt A copy of the object
+@opt A pointer to the object the function was called on
+@opt The name of the class
+@opt The first data member
+@correct 2
+@why this holds the address of the calling object, and *this is the object itself.
+
+@q What does this program print?
+@code cpp
+class C { int n = 1; public:
+    C& dbl() { n *= 2; return *this; }
+    int get() const { return n; } };
+C c;
+c.dbl().dbl().dbl();
+cout << c.get() << endl;
+@end
+@opt 2
+@opt 6
+@opt 8
+@opt 4
+@correct 3
+@why dbl returns a reference to c, so all three calls double the same object: 2, 4, 8.
+
+@q How does the compiler tell postfix operator++ from prefix operator++?
+@opt Postfix takes a dummy int parameter
+@opt Postfix returns void
+@opt Prefix takes a dummy int parameter
+@opt They must have different names
+@correct 1
+@why operator++(int) is postfix. The int is only there to make the parameter lists different.
+
+@q What does this program print?
+@code cpp
+struct N { int v; N(int x) : v(x) {}
+    N operator++(int) {
+        N s = *this; v++; return s; } };
+N a(4);
+N b = a++;
+cout << a.v << " " << b.v << endl;
+@end
+@opt 5 5
+@opt 5 4
+@opt 4 5
+@opt 4 4
+@correct 2
+@why Postfix ++ returns the saved old value (4) and increments a to 5.
+
+@q Why is operator<< for a class normally a non-member friend?
+@opt Its left operand is the stream, and it needs the private members
+@opt Members cannot use cout
+@opt friend functions run faster
+@opt It must return void
+@correct 1
+@why A member operator would need the class on the left. friend grants access to private data.
+
+@q What does this program print?
+@code cpp
+struct Q { int* v;
+    Q(int x) : v(new int(x)) {} };
+Q a(3);
+Q b = a;
+*b.v = 8;
+cout << *a.v << endl;
+@end
+@opt 3
+@opt 8
+@opt 0
+@opt 11
+@correct 2
+@why Q has no copy constructor, so b is a shallow copy: both pointers share one int.
+
+@q Why does LinkedList::operator= start with if (this != &other)?
+@opt To make the copy faster
+@opt So that list = list does not clear itself before copying
+@opt To call the destructor
+@opt It is required to return *this
+@correct 2
+@why Self-assignment would free the nodes and then copy from an empty list.
+
+@q What does this program print?
+@code cpp
+struct D { int data; D *prev, *next; };
+D a = {1}, b = {2}, c = {3};
+a.next = &b; b.next = &c;
+b.prev = &a; c.prev = &b;
+D* p = &c;
+p = p->prev->prev;
+cout << p->data << p->next->data << endl;
+@end
+@opt 12
+@opt 32
+@opt 21
+@opt 23
+@correct 1
+@why Two steps back from c reaches a. a's data is 1 and its next is b, holding 2.
+
+#===========================================================================
+# Typed answers
+#===========================================================================
+@typed Fill in the keyword so length can only be used inside the class.
+@code cpp
+class Box {
+____:
+    double length = 2;
+public:
+    double get() const { return length; }
+};
+@end
+@accept private
+@test
+int main() { Box b; cout << b.get() << endl; return 0; }
+@expect
+2
+@end
+@why private members are hidden from code outside the class.
+
+@typed Write the first line of Box's destructor (just the name and parentheses).
+@code cpp
+class Box {
+public:
+    ____ { cout << "bye" << endl; }
+};
+@end
+@accept ~Box()
+@test
+int main() { { Box b; } return 0; }
+@expect
+bye
+@end
+@why A destructor is the class name with a tilde, no parameters and no return type.
+
+@typed Fill in the scope operator expression so getArea is defined as a member of Box.
+@code cpp
+class Box { public:
+    int w = 3, h = 4;
+    int getArea(); };
+int ____() { return w * h; }
+@end
+@accept Box::getArea
+@test
+int main() { Box b; cout << b.getArea() << endl; return 0; }
+@expect
+12
+@end
+@why ClassName::member ties the definition to the class.
+
+@typed Fill in the member initialiser list so hour gets h and min gets m.
+@code cpp
+class Clock { public:
+    int hour, min;
+    Clock(int h, int m) : ____ {}
+};
+@end
+@accept hour(h), min(m)
+@accept min(m), hour(h)
+@accept hour{h}, min{m}
+@test
+int main() { Clock c(9, 30); cout << c.hour << ":" << c.min << endl; return 0; }
+@expect
+9:30
+@end
+@why An initialiser list names each member and the value to start it with.
+
+@typed Fill in the statement that assigns the parameter to the member with the same name.
+@code cpp
+class P {
+    int x;
+public:
+    void set(int x) { ____ }
+    int get() const { return x; }
+};
+@end
+@accept this->x = x;
+@accept (*this).x = x;
+@accept P::x = x;
+@test
+int main() { P p; p.set(6); cout << p.get() << endl; return 0; }
+@expect
+6
+@end
+@why The parameter shadows the member, so this->x names the member explicitly.
+
+@typed Fill in the return statement so calls can be chained on the same object.
+@code cpp
+class C { int n = 0; public:
+    C& add(int k) { n += k; ____ }
+    int get() const { return n; }
+};
+@end
+@accept return *this;
+@test
+int main() { C c; c.add(1).add(2).add(3); cout << c.get() << endl; return 0; }
+@expect
+6
+@end
+@why Returning *this by reference hands back the object itself.
+
+@typed Write the declaration of the postfix ++ operator for class N.
+@code cpp
+struct N { int v = 1;
+    ____ {
+        N s = *this; v++; return s;
+    } };
+@end
+@accept N operator++(int)
+@test
+int main() { N a; N b = a++; cout << a.v << b.v << endl; return 0; }
+@expect
+21
+@end
+@why The dummy int parameter marks the postfix form, which returns the old value by value.
+
+@typed Fill in the parameter of the copy constructor.
+@code cpp
+struct H { int* v;
+    H(int x) : v(new int(x)) {}
+    H(____) : v(new int(*o.v)) {}
+};
+@end
+@accept const H& o
+@accept H const& o
+@test
+int main() { H a(5); H b = a; *b.v = 9; cout << *a.v << endl; return 0; }
+@expect
+5
+@end
+@why A copy constructor takes a const reference to an object of the same class.
+
+@typed Fill in the line that links the new last node back to the old last node.
+@code cpp
+struct D { int data; D *prev, *next; };
+D a = {1};
+D* current = &a;
+D* newNode = new D{2};
+current->next = newNode;
+____
+cout << a.next->prev->data << endl;
+@end
+@accept newNode->prev = current;
+@accept newNode->prev = &a;
+@test
+@expect
+1
+@end
+@why In a doubly linked list each link needs both directions.
+
+@typed Fill in the line inside the destructor that frees all the nodes.
+@code cpp
+class List { public:
+    int* nodes = new int[3];
+    void clear() { delete[] nodes; }
+    ~List() { ____ cout << "freed" << endl; }
+};
+@end
+@accept clear();
+@accept this->clear();
+@test
+int main() { { List l; } return 0; }
+@expect
+freed
+@end
+@why The destructor calls clear so the memory is released automatically.
