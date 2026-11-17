@@ -4,17 +4,46 @@
 #include "users.h"      // GetCurrentUser
 
 #include <string.h>
+#include <math.h>
+
+// Big text uses the large copy of the font so headings are not stretched (see raylib_game.c)
+static Font UiFontFor(float s)
+{
+    return (s > 28.0f && fontLarge.texture.id != 0) ? fontLarge : font;
+}
 
 void UiText(const char *text, Vector2 pos, float size, Color color)
 {
     float s = size*UI_FONT_SCALE;
-    DrawTextEx(font, text, pos, s, s*UI_FONT_SPACING, color);
+
+    // Start text on a whole screen pixel; text that starts half way between pixels looks soft
+    pos.x = roundf(pos.x*uiScale)/uiScale;
+    pos.y = roundf(pos.y*uiScale)/uiScale;
+
+    DrawTextEx(UiFontFor(s), text, pos, s, s*UI_FONT_SPACING, color);
+}
+
+void UiTextFit(const char *text, Vector2 pos, float size, float maxWidth, Color color)
+{
+    if (UiMeasureText(text, size).x <= maxWidth) { UiText(text, pos, size, color); return; }
+
+    char buf[256];
+    int n = (int)strlen(text);
+    if (n > (int)sizeof(buf) - 4) n = (int)sizeof(buf) - 4;
+    while (n > 0)
+    {
+        memcpy(buf, text, n);
+        memcpy(buf + n, "...", 4);
+        if (UiMeasureText(buf, size).x <= maxWidth) break;
+        n--;
+    }
+    UiText(buf, pos, size, color);
 }
 
 Vector2 UiMeasureText(const char *text, float size)
 {
     float s = size*UI_FONT_SCALE;
-    return MeasureTextEx(font, text, s, s*UI_FONT_SPACING);
+    return MeasureTextEx(UiFontFor(s), text, s, s*UI_FONT_SPACING);
 }
 
 void UiBeginScissor(Rectangle area)
@@ -24,9 +53,73 @@ void UiBeginScissor(Rectangle area)
                      (int)(area.width*uiScale + 0.5f), (int)(area.height*uiScale + 0.5f));
 }
 
+// Set by UiScrollUpdate while a scroll thumb is dragged and on the frame it is released
+static bool scrollGrabbed = false;
+
 bool UiButtonClicked(Rectangle bounds)
 {
+    if (scrollGrabbed) return false;
     return CheckCollisionPointRec(GetMousePosition(), bounds) && IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+}
+
+//----------------------------------------------------------------------------------
+// Scroll bar
+//----------------------------------------------------------------------------------
+#define SCROLL_MIN_THUMB  28.0f
+#define SCROLL_HIT_PAD    8.0f      // the bar is thin, so accept clicks a little either side
+
+static Rectangle ScrollThumb(const UiScroll *sc, Rectangle track, float viewHeight, float maxScroll)
+{
+    float h = track.height*viewHeight/(viewHeight + maxScroll);
+    if (h < SCROLL_MIN_THUMB) h = SCROLL_MIN_THUMB;
+    if (h > track.height) h = track.height;
+    float t = (maxScroll > 0) ? sc->offset/maxScroll : 0.0f;
+    return (Rectangle){ track.x, track.y + t*(track.height - h), track.width, h };
+}
+
+void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep)
+{
+    scrollGrabbed = false;
+    if (maxScroll <= 0) { sc->offset = 0; sc->dragging = false; return; }
+
+    sc->offset -= GetMouseWheelMove()*wheelStep;
+    if (IsKeyDown(KEY_DOWN)) sc->offset += 6.0f;
+    if (IsKeyDown(KEY_UP)) sc->offset -= 6.0f;
+
+    Vector2 mouse = GetMousePosition();
+    Rectangle thumb = ScrollThumb(sc, track, viewHeight, maxScroll);
+    Rectangle hit = { track.x - SCROLL_HIT_PAD, track.y, track.width + 2*SCROLL_HIT_PAD, track.height };
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mouse, hit))
+    {
+        sc->dragging = true;
+        // Grabbing the thumb keeps it under the mouse; clicking the track jumps the thumb there
+        if (mouse.y >= thumb.y && mouse.y <= thumb.y + thumb.height) sc->grab = mouse.y - thumb.y;
+        else sc->grab = thumb.height/2.0f;
+    }
+
+    if (sc->dragging)
+    {
+        float range = track.height - thumb.height;
+        if (range > 0) sc->offset = (mouse.y - sc->grab - track.y)/range*maxScroll;
+        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) sc->dragging = false;
+        scrollGrabbed = true;       // includes the release frame
+    }
+
+    if (sc->offset < 0) sc->offset = 0;
+    if (sc->offset > maxScroll) sc->offset = maxScroll;
+}
+
+void UiScrollDraw(const UiScroll *sc, Rectangle track, float viewHeight, float maxScroll)
+{
+    if (maxScroll <= 0) return;
+
+    Rectangle thumb = ScrollThumb(sc, track, viewHeight, maxScroll);
+    Rectangle hit = { track.x - SCROLL_HIT_PAD, track.y, track.width + 2*SCROLL_HIT_PAD, track.height };
+    bool hot = sc->dragging || CheckCollisionPointRec(GetMousePosition(), hit);
+
+    DrawRectangleRounded(track, 1.0f, 4, (Color){ 225, 228, 238, 255 });
+    DrawRectangleRounded(thumb, 1.0f, 4, hot ? UI_ACCENT : UI_MUTED);
 }
 
 void UiButtonDraw(Rectangle bounds, const char *text)
@@ -61,7 +154,7 @@ void UiDrawLoggedInAs(void)
 {
     const char *name = GetCurrentUser();
     if (name[0] == '\0') return;
-    UiText(TextFormat("Logged in as %s", name), (Vector2){ 60, 86 }, 16, UI_MUTED);
+    UiTextFit(TextFormat("Logged in as %s", name), (Vector2){ 60, 86 }, 16, 840, UI_MUTED);
 }
 
 void UiDrawTextCentered(const char *text, float centerX, float y, float fontSize, Color color)

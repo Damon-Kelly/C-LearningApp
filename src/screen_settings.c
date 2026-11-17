@@ -12,7 +12,6 @@
 #include "screens.h"
 #include "ui.h"
 #include "users.h"
-#include "progress.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -169,9 +168,7 @@ static void Submit(void)
         } break;
         case MODE_DELETE:
         {
-            int userId = GetCurrentUserId();
             ok = UserDeleteAccount(fields[0], err, sizeof(err));
-            if (ok) ProgressDeleteUser(userId);         // the saved progress goes with the account
         } break;
         default: return;
     }
@@ -258,7 +255,7 @@ void DrawSettingsScreen(void)
                 case MODE_PASSWORD: summary = "You need your current password to set a new one."; break;
                 default: summary = "Permanently removes your account. This cannot be undone."; break;
             }
-            UiText(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
+            UiTextFit(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, r.width - 16, UI_MUTED);
         }
 
         if (message[0] != '\0') UiText(message, (Vector2){ 60, 446 }, 18, messageGood ? UI_GOOD : UI_BAD);

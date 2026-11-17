@@ -3,7 +3,6 @@
 #include "ui.h"
 #include "content.h"
 #include "exam_hooks.h"
-#include "progress.h"
 
 static GameScreen finishScreen = UNKNOWN;
 
@@ -17,16 +16,9 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 
 #define EXAM_COLOR   ((Color){ 214, 124, 30, 255 })
 
-// Small text at the right end of a row: "Completed 4/5", "Best 3/5" (or "Passed" for an exam)
-static void DrawBadge(Rectangle row, const AttemptStats *stats, const char *passedWord)
-{
-    const char *badge = TextFormat("%s  %d/%d", stats->passed ? passedWord : "Best", stats->bestScore, stats->bestTotal);
-    Vector2 size = UiMeasureText(badge, 16);
-    UiText(badge, (Vector2){ row.x + row.width - size.x - 16, row.y + (row.height - size.y)/2.0f }, 16, WHITE);
-}
-
-static float scrollY = 0.0f;
-static int scrollSection = -1;      // the section scrollY belongs to, so returning from a lesson keeps the place
+static UiScroll listScroll = { 0 };
+#define LIST_TRACK ((Rectangle){ 912, LIST_TOP, 6, LIST_BOTTOM - LIST_TOP })
+static int scrollSection = -1;      // the section the scroll position belongs to, so returning from a lesson keeps the place
 
 // Topics first, then (if the section has one) the exam as the last row
 static int RowCount(const SectionDef *section)
@@ -44,7 +36,7 @@ static float MaxScroll(const SectionDef *section)
 
 static Rectangle RowRect(int i)
 {
-    return (Rectangle){ 60, LIST_TOP + 10.0f + i*ROW_PITCH - scrollY, 840, ROW_HEIGHT };
+    return (Rectangle){ 60, LIST_TOP + 10.0f + i*ROW_PITCH - listScroll.offset, 840, ROW_HEIGHT };
 }
 
 static bool InList(void)
@@ -57,7 +49,7 @@ void InitTopicsScreen(void)
     finishScreen = UNKNOWN;
     if (scrollSection != selectedSection)
     {
-        scrollY = 0.0f;
+        listScroll.offset = 0.0f;
         scrollSection = selectedSection;
     }
 }
@@ -68,12 +60,7 @@ void UpdateTopicsScreen(void)
 
     if (section != NULL)
     {
-        scrollY -= GetMouseWheelMove()*45.0f;
-        if (IsKeyDown(KEY_DOWN)) scrollY += 6.0f;
-        if (IsKeyDown(KEY_UP)) scrollY -= 6.0f;
-        float max = MaxScroll(section);
-        if (scrollY < 0) scrollY = 0;
-        if (scrollY > max) scrollY = max;
+        UiScrollUpdate(&listScroll, LIST_TRACK, LIST_BOTTOM - LIST_TOP, MaxScroll(section), 45.0f);
 
         for (int i = 0; i < RowCount(section); i++)
         {
@@ -109,21 +96,13 @@ void DrawTopicsScreen(void)
         if (i < section->topicCount)
         {
             const TopicRef *topic = &section->topics[i];
-
-            // A topic whose quiz was passed turns green and shows the best score
-            AttemptStats stats;
-            bool tried = ProgressGetStats(ATTEMPT_QUIZ, section->name, topic->file, &stats);
-            UiButtonDrawEx(r, topic->title, (tried && stats.passed) ? UI_GOOD : UI_ACCENT, true);
-            if (tried) DrawBadge(r, &stats, "Completed");
+            UiButtonDraw(r, topic->title);
             UiText(topic->summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
         }
         else
         {
             bool unlocked = ExamUnlocked(selectedSection);
             UiButtonDrawEx(r, "Section exam", unlocked ? EXAM_COLOR : UI_MUTED, unlocked);
-
-            AttemptStats stats;
-            if (ProgressGetStats(ATTEMPT_EXAM, section->name, "", &stats)) DrawBadge(r, &stats, "Passed");
             const char *summary = unlocked ? "Test yourself on the whole section. Retry as often as you like."
                                            : "Finish the quizzes in this section's topics to unlock the exam.";
             UiText(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
@@ -135,12 +114,8 @@ void DrawTopicsScreen(void)
     float max = MaxScroll(section);
     if (max > 0)
     {
-        float viewHeight = LIST_BOTTOM - LIST_TOP;
-        float thumbHeight = viewHeight*viewHeight/(viewHeight + max);
-        float thumbY = LIST_TOP + (scrollY/max)*(viewHeight - thumbHeight);
-        DrawRectangle(912, (int)LIST_TOP, 6, (int)viewHeight, (Color){ 225, 228, 238, 255 });
-        DrawRectangleRounded((Rectangle){ 912, thumbY, 6, thumbHeight }, 1.0f, 4, UI_MUTED);
-        if (scrollY < max - 1.0f) UiText("scroll for more", (Vector2){ 760, 490 }, 14, UI_MUTED);
+        UiScrollDraw(&listScroll, LIST_TRACK, LIST_BOTTOM - LIST_TOP, max);
+        if (listScroll.offset < max - 1.0f) UiText("scroll for more", (Vector2){ 760, 490 }, 14, UI_MUTED);
     }
 
     UiButtonDrawEx(backButton, "Back", UI_MUTED, true);

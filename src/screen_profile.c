@@ -93,7 +93,7 @@ void DrawProfileScreen(void)
     {
         float y = detailsCard.y + 14 + i*46.0f;
         UiText(labels[i], (Vector2){ x, y }, 16, UI_MUTED);
-        UiText(values[i], (Vector2){ x, y + 18 }, 22, UI_TEXT);
+        UiTextFit(values[i], (Vector2){ x, y + 18 }, 22, detailsCard.x + detailsCard.width - 20 - x, UI_TEXT);
     }
 
     // Progress placeholder

@@ -30,6 +30,8 @@
 // Draw text with the UI font at the given size, and measure it. Use these instead of
 // DrawTextEx/MeasureTextEx with `font`, so spacing and scaling stay the same everywhere.
 void UiText(const char *text, Vector2 pos, float size, Color color);
+// Like UiText, but text wider than maxWidth is shortened with "..." (for names, emails and other user input)
+void UiTextFit(const char *text, Vector2 pos, float size, float maxWidth, Color color);
 Vector2 UiMeasureText(const char *text, float size);
 
 // Clip drawing to a rectangle given in canvas coordinates (like BeginScissorMode, but it follows
@@ -38,6 +40,18 @@ void UiBeginScissor(Rectangle area);
 
 // True on the frame the left mouse button is released over bounds
 bool UiButtonClicked(Rectangle bounds);
+
+// Vertical scroll bar. Keep one UiScroll per scrolling area (static in the screen file).
+// Update handles the mouse wheel, Up/Down keys, dragging the thumb and clicking the track.
+// While the thumb is being dragged (and on the frame it is let go) UiButtonClicked returns
+// false, so letting go of the thumb over a button does not press it.
+typedef struct UiScroll {
+    float offset;        // how far the content is scrolled, 0..maxScroll
+    bool dragging;       // the thumb is held with the mouse
+    float grab;          // where on the thumb it was grabbed
+} UiScroll;
+void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep);
+void UiScrollDraw(const UiScroll *sc, Rectangle track, float viewHeight, float maxScroll);
 
 // Draw a button; enabled=false turns off the hover/press effect
 void UiButtonDraw(Rectangle bounds, const char *text);
