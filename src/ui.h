@@ -52,6 +52,7 @@ typedef struct UiScroll {
 } UiScroll;
 void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep);
 void UiScrollDraw(const UiScroll *sc, Rectangle track, float viewHeight, float maxScroll);
+extern char uiScrollDebug[160];     // last scroll bar state, for the F3 debug overlay
 
 // Draw a button; enabled=false turns off the hover/press effect
 void UiButtonDraw(Rectangle bounds, const char *text);
@@ -75,9 +76,12 @@ float UiDrawWrappedText(const char *text, Rectangle bounds, float fontSize, Colo
 float UiMeasureWrappedText(const char *text, float width, float fontSize);
 
 // Single-line text box, split like buttons: call UiTextBoxUpdate in Update for the box that
-// has focus (typing, backspace, Ctrl+V), and UiTextBoxDraw in Draw for every box.
-// masked=true shows * instead of the characters (passwords).
-void UiTextBoxUpdate(char *buf, int bufSize);
+// has focus, and UiTextBoxDraw in Draw for every box (same Rectangle for both).
+// Click to place the cursor; Left/Right (Ctrl = by word), Home, End, Backspace, Delete, Ctrl+V.
+void UiTextBoxUpdate(Rectangle bounds, char *buf, int bufSize, bool masked);
 void UiTextBoxDraw(Rectangle bounds, const char *label, const char *buf, bool active, bool masked);
+// The same in the code font, without a label (used for typed exam answers)
+void UiCodeBoxUpdate(Rectangle bounds, char *buf, int bufSize);
+void UiCodeBoxDraw(Rectangle bounds, const char *buf, bool active);
 
 #endif // UI_H

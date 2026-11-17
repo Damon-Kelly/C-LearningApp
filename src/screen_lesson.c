@@ -19,6 +19,7 @@
 #include "codepanel.h"
 #include "memview.h"
 #include "exam_hooks.h"
+#include "review.h"         // "Review answers" after a quiz (shared with the exam)
 
 #include <stdio.h>
 #include <string.h>
@@ -42,6 +43,14 @@ static const Rectangle traceResetButton = { 330, 430, 90, 38 };
 static const Rectangle quizRetryButton  = { 330, 300, 150, 48 };
 static const Rectangle quizTopicsButton = { 500, 300, 150, 48 };
 
+// With mistakes to review there are three buttons on the result: Retry, Review answers, Topics
+static const Rectangle quizRetryButton3  = { 215, 300, 150, 48 };
+static const Rectangle quizReviewButton3 = { 385, 300, 190, 48 };
+static const Rectangle quizTopicsButton3 = { 595, 300, 150, 48 };
+static bool QuizHasMistakes(void) { return ReviewMissedCount() > 0; }
+#define RETRY_RECT   (QuizHasMistakes() ? quizRetryButton3 : quizRetryButton)
+#define TOPICS_RECT  (QuizHasMistakes() ? quizTopicsButton3 : quizTopicsButton)
+
 //----------------------------------------------------------------------------------
 // State
 //----------------------------------------------------------------------------------
@@ -58,6 +67,9 @@ static int predictSelected = -1;    // predict
 static bool predictAnswered = false;
 static int quizIndex = 0;           // quiz
 static int quizScore = 0;
+static bool quizCorrectAt[MAX_QUESTIONS];  // per question, reported to progress tracking at the end
+static int quizPicked[MAX_QUESTIONS];      // option picked for each question, for the review
+static bool quizReviewing = false;         // stepping through the missed questions
 static int quizSelected = -1;
 static bool quizAnswered = false;
 static bool quizDone = false;
@@ -83,6 +95,7 @@ static void EnterPage(void)
     quizSelected = -1;
     quizAnswered = false;
     quizDone = false;
+    quizReviewing = false;
 }
 
 static void LoadCurrentLesson(void)
@@ -323,7 +336,12 @@ static void UpdateQuiz(const Page *page)
 {
     if (quizDone)
     {
-        if (UiButtonClicked(quizRetryButton))
+        if (QuizHasMistakes() && UiButtonClicked(quizReviewButton3) && ReviewOpen())
+        {
+            quizReviewing = true;
+            return;
+        }
+        if (UiButtonClicked(RETRY_RECT))
         {
             quizIndex = 0;
             quizScore = 0;
@@ -331,7 +349,7 @@ static void UpdateQuiz(const Page *page)
             quizAnswered = false;
             quizDone = false;
         }
-        if (UiButtonClicked(quizTopicsButton)) finishScreen = TOPICS;
+        if (UiButtonClicked(TOPICS_RECT)) finishScreen = TOPICS;
         return;
     }
 
@@ -345,6 +363,8 @@ static void UpdateQuiz(const Page *page)
             {
                 quizSelected = i;
                 quizAnswered = true;
+                quizCorrectAt[quizIndex] = (i == q->correct);
+                quizPicked[quizIndex] = i;
                 if (i == q->correct) quizScore++;
                 break;
             }
@@ -355,7 +375,26 @@ static void UpdateQuiz(const Page *page)
         if (quizIndex + 1 >= page->questionCount)
         {
             quizDone = true;
-            OnTopicQuizFinished(selectedSection, selectedTopic, quizScore, page->questionCount);
+            QuestionResult results[MAX_QUESTIONS];
+            for (int i = 0; i < page->questionCount; i++) results[i] = (QuestionResult){ page->questions[i].prompt, quizCorrectAt[i] };
+            OnTopicQuizFinished(selectedSection, selectedTopic, quizScore, page->questionCount, results, page->questionCount);
+
+            // Hand every question to the review, so missed ones can be looked at again
+            ReviewClear();
+            for (int i = 0; i < page->questionCount; i++)
+            {
+                const Question *qq = &page->questions[i];
+                ReviewItem item = { 0 };
+                item.number = i + 1;
+                item.prompt = qq->prompt;
+                item.why = qq->why;
+                item.wasCorrect = quizCorrectAt[i];
+                item.optionCount = qq->optionCount;
+                for (int j = 0; j < qq->optionCount; j++) item.options[j] = qq->options[j];
+                item.correct = qq->correct;
+                item.picked = quizPicked[i];
+                ReviewAdd(&item);
+            }
         }
         else
         {
@@ -379,8 +418,9 @@ static void DrawQuiz(const Page *page)
 
         UiDrawTextCentered(TextFormat("%d / %d", quizScore, page->questionCount), cx, 160, 80, UI_ACCENT);
         UiDrawTextCentered(message, cx, 255, 22, UI_TEXT);
-        UiButtonDraw(quizRetryButton, "Retry quiz");
-        UiButtonDrawEx(quizTopicsButton, "Topics", UI_MUTED, true);
+        UiButtonDraw(RETRY_RECT, "Retry quiz");
+        if (QuizHasMistakes()) UiButtonDraw(quizReviewButton3, "Review answers");
+        UiButtonDrawEx(TOPICS_RECT, "Topics", UI_MUTED, true);
         return;
     }
 
@@ -442,6 +482,13 @@ void UpdateLessonScreen(void)
 
     const Page *page = &lesson.pages[pageIndex];
 
+    // While reviewing quiz mistakes, only the review reacts (its buttons, arrows and Esc)
+    if (quizReviewing)
+    {
+        if (ReviewUpdate()) quizReviewing = false;
+        return;
+    }
+
     switch (page->type)
     {
         case PAGE_EXPLAIN: UpdateExplain(page); break;
@@ -478,6 +525,12 @@ void DrawLessonScreen(void)
     const Page *page = &lesson.pages[pageIndex];
 
     UiDrawHeader(lesson.title);
+
+    if (quizReviewing)
+    {
+        ReviewDraw();
+        return;
+    }
 
     const char *indicator = TextFormat("Page %d of %d", pageIndex + 1, lesson.pageCount);
     Vector2 indicatorSize = UiMeasureText(indicator, 20);

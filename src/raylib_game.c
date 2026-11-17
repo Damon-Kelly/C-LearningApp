@@ -176,6 +176,7 @@ static void ToggleFullscreenMode(void)
 //   monoFont   code, always CODE_FONT_SIZE
 // The scale is rounded to steps of 0.25 so dragging the window edge does not reload every frame.
 static float loadedFontScale = 0.0f;
+static bool debugOverlay = false;          // F3: mouse and scroll bar state, for tracking down input problems
 
 static Font LoadSharpFont(const char *file, int size)
 {
@@ -222,6 +223,7 @@ static Rectangle CanvasDestination(void)
 // Update and draw one frame
 static void UpdateDrawFrame(void)
 {
+    if (IsKeyPressed(KEY_F3)) debugOverlay = !debugOverlay;
     if (IsKeyPressed(KEY_F11) || (IsKeyPressed(KEY_ENTER) && (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)))) ToggleFullscreenMode();
 
     // Screens work in canvas coordinates, so map the mouse from window to canvas
@@ -257,6 +259,17 @@ static void UpdateDrawFrame(void)
             if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
 
         EndMode2D();
+
+        // F3 debug overlay, drawn in window pixels with raylib's built-in font
+        if (debugOverlay)
+        {
+            Vector2 m = GetMousePosition();
+            DrawRectangle(0, 0, 900, 70, Fade(BLACK, 0.75f));
+            DrawText(TextFormat("canvas mouse %.0f, %.0f   left button: down %d pressed %d released %d   window %dx%d  scale %.2f",
+                                m.x, m.y, IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsMouseButtonPressed(MOUSE_BUTTON_LEFT),
+                                IsMouseButtonReleased(MOUSE_BUTTON_LEFT), GetScreenWidth(), GetScreenHeight(), uiScale), 8, 8, 20, YELLOW);
+            DrawText(uiScrollDebug, 8, 38, 20, YELLOW);
+        }
 
         // Black bars on top, so nothing a screen draws outside the canvas shows
         DrawRectangle(0, 0, (int)dest.x, GetScreenHeight(), BLACK);
