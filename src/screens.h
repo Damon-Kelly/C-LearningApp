@@ -32,6 +32,7 @@ typedef enum GameScreen {
     SETTINGS,
     PROGRESS,
     VISUALIZER,
+    CHALLENGE,
     SCREEN_COUNT
 } GameScreen;
 
@@ -54,6 +55,7 @@ extern Font monoFont;           // Code font (monospace, drawn at CODE_FONT_SIZE
 extern bool quitRequested;      // Set to true to close the app
 extern int selectedSection;     // Chosen on the Sections screen
 extern int selectedTopic;       // Index inside the chosen section
+extern int selectedChallenge;   // Coding challenge inside the chosen section (screen_challenge.c)
 extern float uiScale;           // Window pixels per canvas pixel (see raylib_game.c)
 extern Vector2 uiOffset;        // Where the canvas starts inside the window
 
@@ -114,6 +116,17 @@ GameScreen FinishVisualizerScreen(void);
 void OpenVisualizer(const char *code, const char *input, GameScreen returnTo);
 // Open it with whatever code it had last time (or the first example), returning to Sections
 void OpenVisualizerHome(void);
+
+void InitChallengeScreen(void);
+void UpdateChallengeScreen(void);
+void DrawChallengeScreen(void);
+void UnloadChallengeScreen(void);
+GameScreen FinishChallengeScreen(void);
+
+// The coding challenges of a section (loaded on first use), or NULL when it has none
+struct ChallengeSet;
+const struct ChallengeSet *SectionChallenges(int section);
+void UnloadAllChallenges(void);     // at exit
 
 void InitSettingsScreen(void);
 void UpdateSettingsScreen(void);

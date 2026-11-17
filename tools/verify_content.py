@@ -21,6 +21,7 @@ Exam files (exam_*.txt) are checked too:
 import argparse
 import glob
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -319,6 +320,92 @@ def is_exam_file(path):
     return False
 
 
+# ---------------------------------------------------------------------------------------------
+# Coding challenges (challenge_*.txt): every solution must pass all tests with gcc,
+# every starter must compile but fail at least one test, and no solution may break its @forbid rules.
+# ---------------------------------------------------------------------------------------------
+def is_challenge_file(path):
+    return os.path.basename(path).startswith("challenge_")
+
+
+def parse_challenges(lines):
+    items, cur, i = [], None, 0
+    def block(i, stops):
+        out = []
+        while i < len(lines) and not any(lines[i].startswith(s) for s in stops):
+            out.append(lines[i]); i += 1
+        return "\n".join(out).rstrip("\n"), i
+    while i < len(lines):
+        l = lines[i]
+        if l.startswith("@challenge "):
+            cur = {"title": l[11:].strip(), "line": i + 1, "tests": [], "forbid": [], "helpers": "", "noleaks": False}
+            items.append(cur)
+        elif cur is None or not l.startswith("@"):
+            pass
+        elif l.strip() in ("@text", "@starter", "@solution", "@helpers"):
+            text, i = block(i + 1, ["@end"])
+            cur[l.strip()[1:]] = text
+        elif l.startswith("@forbid "):
+            cur["forbid"].append(l[8:].split("|")[0].strip())
+        elif l.startswith("@test") or l.startswith("@hidden"):
+            name = l.split(" ", 1)[1].strip() if " " in l else ""
+            code, i = block(i + 1, ["@expect", "@end"])
+            expect, i = block(i + 1, ["@end"])
+            cur["tests"].append({"name": name, "code": code, "expect": expect, "line": i})
+        elif l.strip() == "@noleaks":
+            cur["noleaks"] = True
+        i += 1
+    return items
+
+
+def challenge_program(c, code, test):
+    body = "\n".join("    " + l for l in test["code"].split("\n"))
+    return C_INCLUDES + code + "\n\n" + c.get("helpers", "") + "\n\nint main(void) {\n" + body + "\n    return 0;\n}\n"
+
+
+def strip_comments_and_strings(code):
+    code = re.sub(r"//[^\n]*", "", code)
+    code = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+    return re.sub(r'"(\\.|[^"\\])*"', '""', code)
+
+
+def same_output(a, b):
+    norm = lambda t: "\n".join(l.rstrip() for l in t.replace("\r", "").rstrip().split("\n"))
+    return norm(a) == norm(b)
+
+
+def check_challenges(path):
+    name = os.path.basename(path)
+    problems = 0
+    for c in parse_challenges(open(path).read().split("\n")):
+        where = "%s:%d %s" % (name, c["line"], c["title"])
+        for key in ("text", "starter", "solution"):
+            if key not in c:
+                print("FAIL %s  missing @%s" % (where, key)); problems += 1
+        if "solution" not in c:
+            continue
+        for f in c["forbid"]:
+            if f in strip_comments_and_strings(c["solution"]):
+                print("FAIL %s  the solution uses forbidden %r" % (where, f)); problems += 1
+        starter_failed = False
+        for t in c["tests"]:
+            ok, out = compile_and_run_source(challenge_program(c, c["solution"], t), "c")
+            if not ok:
+                print("FAIL %s  solution does not compile/run for test %r:\n%s" % (where, t["name"], out)); problems += 1
+            elif not same_output(out, t["expect"]):
+                print("FAIL %s  test %r: solution prints %r, expected %r" % (where, t["name"], out, t["expect"])); problems += 1
+            ok2, out2 = compile_and_run_source(challenge_program(c, c["starter"], t), "c")
+            if not ok2 and "error" in out2.lower() and "warning" not in out2.lower():
+                print("FAIL %s  the starter does not compile:\n%s" % (where, out2[:300])); problems += 1
+            if not ok2 or not same_output(out2, t["expect"]):
+                starter_failed = True
+        if not starter_failed:
+            print("FAIL %s  the starter already passes every test" % where); problems += 1
+        if problems == 0:
+            print("ok   %s  (%d tests)" % (where, len(c["tests"])))
+    return problems
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("files", nargs="*")
@@ -330,7 +417,7 @@ def main():
         root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "resources", "content")
         files = sorted(f for f in glob.glob(os.path.join(root, "*.txt")) if os.path.basename(f) != "sections.txt")
 
-    problems = sum(check_exam(path) if is_exam_file(path) else check_file(path, args.fix) for path in files)
+    problems = sum(check_challenges(path) if is_challenge_file(path) else check_exam(path) if is_exam_file(path) else check_file(path, args.fix) for path in files)
     print("\n%s" % ("All examples check out." if problems == 0 else "%d problem(s) found." % problems))
     return 1 if problems else 0
 

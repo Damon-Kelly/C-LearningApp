@@ -872,7 +872,7 @@ void DrawVisualizerScreen(void)
     UiText("Write C, run it, and watch every step in memory", (Vector2){ 182, 18 }, 14, UI_MUTED);
     DrawRectangleGradientH(16, 46, 928, 2, UI_ACCENT, UI_ACCENT2);
     UiButtonDrawEx(examplesButton, "Examples  v", UI_MUTED, true);
-    UiButtonDrawEx(backButton, returnTo == LESSON ? "Back to lesson" : "Back", UI_MUTED, true);
+    UiButtonDrawEx(backButton, returnTo == LESSON ? "Back to lesson" : returnTo == CHALLENGE ? "Back to challenge" : "Back", UI_MUTED, true);
 
     // Editor with the step markers
     EditorMarks marks = { 0, 0, 0 };

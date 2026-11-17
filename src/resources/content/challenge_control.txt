@@ -1,0 +1,158 @@
+# Coding challenges for "Control flow". Format: see challenge.h. Checked by tools/verify_content.py.
+
+@challenge FizzBuzz
+@level 1
+@text
+Write a function fizzbuzz that prints the numbers from 1 to n, one per line, but:
+
+for multiples of 3 print Fizz instead of the number, for multiples of 5 print Buzz, and for multiples of both print FizzBuzz.
+@end
+@starter
+#include <stdio.h>
+
+void fizzbuzz(int n) {
+    // your code here
+}
+@end
+@solution
+#include <stdio.h>
+
+void fizzbuzz(int n) {
+    for (int i = 1; i <= n; i++) {
+        if (i % 15 == 0) printf("FizzBuzz\n");
+        else if (i % 3 == 0) printf("Fizz\n");
+        else if (i % 5 == 0) printf("Buzz\n");
+        else printf("%d\n", i);
+    }
+}
+@end
+@hint Check "multiple of both" first: an else if chain stops at the first true test.
+@test up to 5
+fizzbuzz(5);
+@expect
+1
+2
+Fizz
+4
+Buzz
+@end
+@test up to 15
+fizzbuzz(15);
+@expect
+1
+2
+Fizz
+4
+Buzz
+Fizz
+7
+8
+Fizz
+Buzz
+11
+Fizz
+13
+14
+FizzBuzz
+@end
+@hidden nothing for 0
+fizzbuzz(0);
+printf("done\n");
+@expect
+done
+@end
+
+@challenge Sum of the digits
+@level 2
+@text
+Write a function digitSum that returns the sum of the digits of a non-negative int. For example digitSum(4821) is 4 + 8 + 2 + 1 = 15.
+@end
+@starter
+int digitSum(int n) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int digitSum(int n) {
+    int sum = 0;
+    while (n > 0) {
+        sum += n % 10;
+        n /= 10;
+    }
+    return sum;
+}
+@end
+@hint n % 10 is the last digit, and n / 10 removes it. Repeat while n > 0.
+@test four digits
+printf("%d\n", digitSum(4821));
+@expect
+15
+@end
+@test with a zero inside
+printf("%d\n", digitSum(405));
+@expect
+9
+@end
+@test one digit
+printf("%d\n", digitSum(7));
+@expect
+7
+@end
+@hidden zero
+printf("%d\n", digitSum(0));
+@expect
+0
+@end
+
+@challenge Is it prime?
+@level 2
+@text
+Write a function isPrime that returns 1 if n is a prime number and 0 if it is not. A prime is greater than 1 and can only be divided evenly by 1 and itself.
+
+Only try divisors while d * d <= n, so it stays fast.
+@end
+@starter
+int isPrime(int n) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int isPrime(int n) {
+    if (n < 2) return 0;
+    for (int d = 2; d * d <= n; d++) {
+        if (n % d == 0) return 0;
+    }
+    return 1;
+}
+@end
+@hint Return 0 straight away for n < 2. Then return 0 as soon as some d divides n; if the loop finishes, it is prime.
+@test small primes
+printf("%d\n", isPrime(2));
+printf("%d\n", isPrime(3));
+printf("%d\n", isPrime(13));
+@expect
+1
+1
+1
+@end
+@test not prime
+printf("%d\n", isPrime(4));
+printf("%d\n", isPrime(9));
+printf("%d\n", isPrime(91));
+@expect
+0
+0
+0
+@end
+@test 0 and 1
+printf("%d %d\n", isPrime(0), isPrime(1));
+@expect
+0 0
+@end
+@hidden a bigger one
+printf("%d %d\n", isPrime(97), isPrime(221));
+@expect
+1 0
+@end

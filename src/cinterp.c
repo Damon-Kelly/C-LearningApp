@@ -427,6 +427,12 @@ static Typedef typedefs[MAX_TYPEDEFS];
 static int typedefCount = 0;
 
 static Node *globalDecls = NULL;    // list of N_DECL for global variables
+
+// Every call seen while parsing, checked once the whole program is known
+typedef struct CallSite { char name[CI_NAME_LEN]; int line; } CallSite;
+#define MAX_CALLS 512
+static CallSite calls[MAX_CALLS];
+static int callCount = 0;
 static Node *globalTail = NULL;
 
 static int pos = 0;                 // current token
@@ -721,6 +727,7 @@ static Node *ParsePrimary(void)
             pos++;
             Node *n = NewNode(N_CALL, line);
             snprintf(n->name, CI_NAME_LEN, "%s", t->text);
+            if (callCount < MAX_CALLS) { snprintf(calls[callCount].name, CI_NAME_LEN, "%s", t->text); calls[callCount++].line = line; }
             Node head = { 0 }, *tail = &head;
             if (!Accept(")"))
             {
@@ -1217,7 +1224,13 @@ static int stepCap = 0;
 static unsigned randState = 1;
 static unsigned garbageState = 1;      // separate from rand(), so garbage does not change rand()'s numbers
 
-typedef struct Val { CiType *t; long i; double d; int addr; } Val;   // addr: arrays and structs
+// addr: where an array or struct value lives. from: for a pointer, an address inside the object
+// (variable or heap block) it was made from, so an index that leaves that object can be caught
+typedef struct Val { CiType *t; long i; double d; int addr; long from; } Val;
+
+// The 'from' of each pointer stored in memory, kept at the pointer's address
+static long provenance[CI_MEM_SIZE];
+static unsigned char provenanceSet[CI_MEM_SIZE];
 
 typedef enum Flow { FLOW_NORMAL, FLOW_BREAK, FLOW_CONTINUE, FLOW_RETURN } Flow;
 static Val returnValue;
@@ -1390,7 +1403,7 @@ static void StoreRaw(int addr, const void *src, int size)
 // Loads a scalar of type t from addr (with a warning if it never got a value)
 static Val Load(int addr, CiType *t)
 {
-    Val v = { t, 0, 0, addr };
+    Val v = { t, 0, 0, addr, 0 };
     if (t->kind == CI_ARRAY || t->kind == CI_STRUCT) { v.addr = addr; return v; }
     CheckAccess(addr, t->size, false);
     if (!IsInit(addr, t->size))
@@ -1404,7 +1417,8 @@ static Val Load(int addr, CiType *t)
         case CI_BOOL: v.i = mem[addr] != 0; break;
         case CI_CHAR: v.i = (signed char)mem[addr]; break;
         case CI_INT: { int32_t x; memcpy(&x, &mem[addr], 4); v.i = x; } break;
-        case CI_LONG: case CI_PTR: { int64_t x; memcpy(&x, &mem[addr], 8); v.i = (long)x; } break;
+        case CI_LONG: { int64_t x; memcpy(&x, &mem[addr], 8); v.i = (long)x; } break;
+        case CI_PTR: { int64_t x; memcpy(&x, &mem[addr], 8); v.i = (long)x; v.from = provenanceSet[addr] ? provenance[addr] : v.i; } break;
         case CI_FLOAT: { float x; memcpy(&x, &mem[addr], 4); v.d = x; } break;
         case CI_DOUBLE: { double x; memcpy(&x, &mem[addr], 8); v.d = x; } break;
         default: break;
@@ -1412,8 +1426,8 @@ static Val Load(int addr, CiType *t)
     return v;
 }
 
-static Val MakeInt(long i, CiType *t) { Val v = { t, i, 0, 0 }; return v; }
-static Val MakeDouble(double d) { Val v = { &tDouble, 0, d, 0 }; return v; }
+static Val MakeInt(long i, CiType *t) { Val v = { t, i, 0, 0, i }; return v; }
+static Val MakeDouble(double d) { Val v = { &tDouble, 0, d, 0, 0 }; return v; }
 
 static double AsDouble(Val v) { return IsFloating(v.t) ? v.d : (double)v.i; }
 static long AsLong(Val v) { return IsFloating(v.t) ? (long)v.d : v.i; }
@@ -1422,7 +1436,7 @@ static bool Truthy(Val v) { return IsFloating(v.t) ? v.d != 0 : v.i != 0; }
 // Converts a value to type t, as an assignment or initialisation would
 static Val Convert(Val v, CiType *t, int line)
 {
-    Val r = { t, 0, 0, 0 };
+    Val r = { t, 0, 0, 0, 0 };
     switch (t->kind)
     {
         case CI_BOOL: r.i = Truthy(v); return r;
@@ -1435,6 +1449,7 @@ static Val Convert(Val v, CiType *t, int line)
             if (IsFloating(v.t)) Fail(line, "cannot store a decimal number in a pointer");
             if (IsInteger(v.t) && v.i != 0) Warn(line, "line %d stores a plain number in a pointer (%s); did you forget & or *?", line, t->name);
             r.i = v.i;
+            r.from = IsPtr(v.t) ? v.from : v.i;
             return r;
         case CI_STRUCT:
             if (v.t->kind != CI_STRUCT || v.t->structIndex != t->structIndex) Fail(line, "cannot store a %s in a %s", v.t->name, t->name);
@@ -1457,6 +1472,8 @@ static void Store(int addr, CiType *t, Val v)
         {
             int64_t x = v.i;
             StoreRaw(addr, &x, 8);
+            provenance[addr] = v.from;
+            provenanceSet[addr] = 1;
             // Guess what a heap block holds from the first pointer type it is stored in
             CiBlock *b = (v.i >= CI_HEAP_BASE && v.i < CI_HEAP_END) ? BlockAt((int)v.i) : NULL;
             if (b && b->hint == NULL && b->addr == v.i && t->base->kind != CI_VOID) b->hint = t->base;
@@ -1474,6 +1491,8 @@ static void Store(int addr, CiType *t, Val v)
             CheckAccess(addr, t->size, true);
             memcpy(&mem[addr], tmp, (size_t)t->size);
             memcpy(&memInit[addr], init, (size_t)t->size);
+            memmove(&provenance[addr], &provenance[v.addr], sizeof(long)*(size_t)t->size);
+            memmove(&provenanceSet[addr], &provenanceSet[v.addr], (size_t)t->size);
         } break;
         default: Fail(curLine, "cannot store a value of type %s", t->name);
     }
@@ -1496,6 +1515,7 @@ static void Garbage(int addr, int size)
         garbageState = garbageState*1103515245u + 12345u;
         mem[addr + i] = (unsigned char)(garbageState >> 16);
         memInit[addr + i] = 0;
+        provenanceSet[addr + i] = 0;
     }
 }
 
@@ -1558,6 +1578,29 @@ static Flow Exec(Node *n);
 
 typedef struct LVal { int addr; CiType *t; } LVal;
 
+// An access through a pointer must stay inside the variable or heap block the pointer was made
+// from. (Real C would silently read a neighbouring variable; for learning we stop and explain.)
+static void CheckInObject(long from, long addr, int size, int line)
+{
+    if (from < CI_NULL_END || from >= CI_MEM_SIZE) return;     // NULL and garbage are caught by CheckAccess
+    if (CiRegion((int)from) == 2)
+    {
+        CiBlock *b = BlockAt((int)from);
+        if (b == NULL || b->freeLine) return;
+        if (addr >= b->addr && addr + size <= b->addr + b->size) return;
+        Fail(line, "out of bounds: this reaches %s the %d-byte block at %d (malloc'd on line %d). Is an index too big, or a pointer moved too far?",
+             addr < b->addr ? "before the start of" : "past the end of", b->size, b->addr, b->allocLine);
+    }
+    const Var *v = VarAt((int)from);
+    if (v == NULL) return;
+    if (addr >= v->addr && addr + size <= v->addr + v->type->size) return;
+    if (v->type->kind == CI_ARRAY)
+        Fail(line, "out of bounds: this reaches %s the array %s, which has %d element%s (indexes 0 to %d). Is an index too big, or a pointer moved too far?",
+             addr < v->addr ? "before the start of" : "past the end of", v->name, v->type->len, v->type->len == 1 ? "" : "s", v->type->len - 1);
+    Fail(line, "out of bounds: this reaches %s %s (%d bytes at %d). Is an index too big, or a pointer moved too far?",
+         addr < v->addr ? "before the start of" : "past the end of", v->name, v->type->size, v->addr);
+}
+
 static const CiField *FindField(CiType *st, const char *name, int line)
 {
     const CiStruct *s = &structs[st->structIndex];
@@ -1587,6 +1630,7 @@ static LVal EvalLVal(Node *n)
             if (!IsPtr(p.t)) Fail(n->line, "* can only be used on a pointer, but this is a %s", p.t->name);
             if (p.t->base->kind == CI_VOID) Fail(n->line, "cannot use * on a void pointer; cast it to a real pointer type first");
             curLine = n->line;
+            CheckInObject(p.from, p.i, p.t->base->size, n->line);
             return (LVal){ (int)p.i, p.t->base };
         }
         case N_INDEX:
@@ -1606,6 +1650,7 @@ static LVal EvalLVal(Node *n)
                 if (arr.t->kind == CI_ARRAY && (idx.i < 0 || idx.i >= arr.t->len))
                     Fail(n->line, "index %ld is out of range: the array has %d elements, so valid indexes are 0 to %d", idx.i, arr.t->len, arr.t->len - 1);
             }
+            CheckInObject(base.from, base.i + idx.i*elem->size, elem->size, n->line);
             return (LVal){ (int)(base.i + idx.i*elem->size), elem };
         }
         case N_MEMBER:
@@ -1626,6 +1671,7 @@ static LVal EvalLVal(Node *n)
             }
             const CiField *f = FindField(p.t->base, n->name, n->line);
             if (p.i >= 0 && p.i < CI_NULL_END) Fail(n->line, "NULL pointer dereference: %s is NULL here, so ->%s has nothing to read. Check for NULL before using ->.", n->a->kind == N_IDENT ? n->a->name : "the pointer", n->name);
+            CheckInObject(p.from, p.i + f->offset, f->type->size, n->line);
             return (LVal){ (int)p.i + f->offset, f->type };
         }
         case N_STR: return (LVal){ n->strAddr, n->type };
@@ -1677,7 +1723,9 @@ static Val Binary(const char *op, Val a, Val b, int line)
             if (!IsInteger(k.t)) Fail(line, "only whole numbers can be added to a pointer");
             if (op[0] == '-' && !IsPtr(a.t)) Fail(line, "a pointer cannot be subtracted from a number");
             int size = p.t->base->kind == CI_VOID ? 1 : p.t->base->size;
-            return MakeInt(p.i + (op[0] == '+' ? k.i : -k.i)*size, p.t);
+            Val r = MakeInt(p.i + (op[0] == '+' ? k.i : -k.i)*size, p.t);
+            r.from = p.from;
+            return r;
         }
         long x = a.i, y = b.i;
         if (strcmp(op, "==") == 0) return MakeInt(x == y, &tInt);
@@ -2186,7 +2234,7 @@ static Val Eval(Node *n)
         {
             Val v = Eval(n->a);
             if (n->type->kind == CI_VOID) return MakeInt(0, &tVoid);
-            if (n->type->kind == CI_PTR) { Val r = MakeInt(AsLong(v), n->type); return r; }
+            if (n->type->kind == CI_PTR) { Val r = MakeInt(AsLong(v), n->type); if (IsPtr(v.t)) r.from = v.from; return r; }
             return Convert(v, n->type, n->line);
         }
         case N_SIZEOF_TYPE: return MakeInt(n->type->size, &tLong);
@@ -2510,11 +2558,13 @@ static void ResetState(void)
     memset(structTypes, 0, sizeof(structTypes));
     funcCount = 0;
     memset(funcs, 0, sizeof(funcs));
+    callCount = 0;
     typedefCount = 0;
     globalDecls = globalTail = NULL;
     pos = 0;
     memset(mem, 0, sizeof(mem));
     memset(memInit, 0, sizeof(memInit));
+    memset(provenanceSet, 0, sizeof(provenanceSet));
     dataTop = CI_DATA_BASE;
     literalStart = literalEnd = 0;
     tempTop = TEMP_BASE;
@@ -2566,6 +2616,19 @@ bool CiExecute(const char *source, const char *in, CiRun *r)
         PushTok(eof);
     }
     ParseProgram();
+
+    // Calls to functions that do not exist are a compile error, as in a real compiler
+    {
+        static const char *builtins[] = { "printf", "puts", "putchar", "scanf", "fgets", "getchar", "malloc", "calloc", "realloc", "free",
+            "strlen", "strcpy", "strncpy", "strcat", "strcmp", "memset", "memcpy", "abs", "sqrt", "fabs", "pow", "rand", "srand", "exit", NULL };
+        for (int c = 0; c < callCount; c++)
+        {
+            if (FindFunc(calls[c].name)) continue;
+            bool known = false;
+            for (int b = 0; builtins[b]; b++) if (strcmp(builtins[b], calls[c].name) == 0) known = true;
+            if (!known) Fail(calls[c].line, "there is no function called %s (check the spelling, and that it is defined in the program)", calls[c].name);
+        }
+    }
 
     Func *mainFunc = FindFunc("main");
     if (mainFunc == NULL || mainFunc->body == NULL) Fail(1, "the program needs a main function: int main(void) { ... }");
