@@ -49,6 +49,7 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [PROFILE]  = { InitProfileScreen,  UpdateProfileScreen,  DrawProfileScreen,  UnloadProfileScreen,  FinishProfileScreen },
     [SETTINGS] = { InitSettingsScreen, UpdateSettingsScreen, DrawSettingsScreen, UnloadSettingsScreen, FinishSettingsScreen },
     [PROGRESS] = { InitProgressScreen, UpdateProgressScreen, DrawProgressScreen, UnloadProgressScreen, FinishProgressScreen },
+    [VISUALIZER] = { InitVisualizerScreen, UpdateVisualizerScreen, DrawVisualizerScreen, UnloadVisualizerScreen, FinishVisualizerScreen },
 };
 
 // Fade transition state
@@ -249,15 +250,15 @@ static void UpdateDrawFrame(void)
 
     BeginDrawing();
 
-        ClearBackground(BLACK);
+        ClearBackground((Color){ 1, 4, 9, 255 });   // the bars around the canvas
 
         BeginMode2D((Camera2D){ .offset = uiOffset, .target = { 0, 0 }, .rotation = 0.0f, .zoom = uiScale });
 
-            DrawRectangle(0, 0, screenWidth, screenHeight, UI_BG);
+            UiDrawBackground(screenWidth, screenHeight);
 
             screens[currentScreen].draw();
 
-            if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
+            if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(UI_BG, transAlpha));
 
         EndMode2D();
 

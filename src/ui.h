@@ -12,13 +12,19 @@
 
 #include "raylib.h"
 
-// Palette
-#define UI_BG      ((Color){ 245, 246, 250, 255 })
-#define UI_TEXT    ((Color){  30,  34,  48, 255 })
-#define UI_MUTED   ((Color){ 110, 116, 135, 255 })
-#define UI_ACCENT  ((Color){  52, 101, 222, 255 })
-#define UI_GOOD    ((Color){  46, 160, 100, 255 })
-#define UI_BAD     ((Color){ 206,  64,  64, 255 })
+// Palette: a dark "IDE" theme
+#define UI_BG       ((Color){  13,  17,  23, 255 })    // page background
+#define UI_PANEL    ((Color){  22,  27,  34, 255 })    // cards and panels
+#define UI_PANEL2   ((Color){  33,  38,  45, 255 })    // raised: secondary buttons, hover
+#define UI_BORDER   ((Color){  48,  54,  61, 255 })
+#define UI_TEXT     ((Color){ 230, 237, 243, 255 })
+#define UI_MUTED    ((Color){ 139, 148, 158, 255 })    // as a button fill: draws a secondary (outlined) button
+#define UI_ACCENT   ((Color){  56, 139, 253, 255 })
+#define UI_ACCENT2  ((Color){ 163, 113, 247, 255 })    // purple, for gradients and highlights
+#define UI_GOOD     ((Color){  63, 185,  80, 255 })
+#define UI_BAD      ((Color){ 248,  81,  73, 255 })
+#define UI_WARN     ((Color){ 210, 153,  34, 255 })
+#define UI_INPUT    ((Color){   1,   4,   9, 255 })    // inside text boxes
 
 // The UI font (Carlito, loaded in raylib_game.c) looks smaller than raylib's default font at the
 // same size, so every size passed to UiText / UiMeasureText is scaled up by this factor.
@@ -51,6 +57,8 @@ typedef struct UiScroll {
     float grab;          // where on the thumb it was grabbed
 } UiScroll;
 void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep);
+// Same, but the Up/Down keys can be left alone (useful when a text editor needs them); wheelStep 0 ignores the wheel
+void UiScrollUpdateEx(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep, bool arrowKeys);
 void UiScrollDraw(const UiScroll *sc, Rectangle track, float viewHeight, float maxScroll);
 extern char uiScrollDebug[160];     // last scroll bar state, for the F3 debug overlay
 
@@ -60,6 +68,15 @@ void UiButtonDrawEx(Rectangle bounds, const char *text, Color fill, bool enabled
 
 // Screen title at the top-left with an accent underline
 void UiDrawHeader(const char *title);
+
+// The animated page background (a slowly drifting dot grid), drawn under every screen
+void UiDrawBackground(float width, float height);
+
+// Faint, slowly scrolling C code (syntax coloured) filling an area: decoration for the title screen
+void UiDrawCodeRain(Rectangle area, float speed);
+
+// True when two colours are the same
+bool UiSameColor(Color a, Color b);
 
 // "Logged in as <name>" in small muted text just under the header line. Draws nothing when
 // nobody is logged in.

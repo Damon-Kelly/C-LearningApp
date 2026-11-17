@@ -12,6 +12,7 @@
 #include "screens.h"
 #include "ui.h"
 #include "users.h"
+#include "progress.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -168,7 +169,9 @@ static void Submit(void)
         } break;
         case MODE_DELETE:
         {
+            int userId = GetCurrentUserId();
             ok = UserDeleteAccount(fields[0], err, sizeof(err));
+            if (ok) ProgressDeleteUser(userId);         // the saved progress goes with the account
         } break;
         default: return;
     }

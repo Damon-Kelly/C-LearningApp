@@ -49,7 +49,10 @@ PROJECT_SOURCE_FILES  ?= \
     progress.c \
     review.c \
     codepanel.c \
-    memview.c
+    memview.c \
+    cinterp.c \
+    editor.c \
+    screen_visualizer.c
 
 # raylib library variables
 RAYLIB_PATH           ?= C:/raylib/raylib

@@ -16,6 +16,11 @@
 #define CODE_LINE_HEIGHT  24
 
 int CodeLineCount(const char *text);
+
+// Syntax colouring, shared with the Visualizer's editor: one class per character of a line
+typedef enum CodeClass { CLS_NORMAL, CLS_KEYWORD, CLS_STRING, CLS_COMMENT, CLS_NUMBER, CLS_PREPROC, CLS_COUNT } CodeClass;
+void CodeClassify(const char *s, int n, unsigned char *cls);
+Color CodeClassColor(int cls);
 float CodePanelHeight(const char *code);
 float OutputPanelHeight(const char *output);
 
