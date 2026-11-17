@@ -1,0 +1,225 @@
+# Coding challenges for "Linked lists". Written in C (malloc/free instead of new/delete) so the
+# Visualizer can run them; the list logic is the same as in the C++ lessons.
+# Format: see challenge.h. Checked by tools/verify_content.py.
+
+@challenge Count the nodes
+@level 1
+@text
+Write a function listLength that returns how many nodes the list starting at head has. An empty list (head is NULL) has 0.
+
+The lists are written in C here (malloc instead of new), so the Visualizer can show them; the logic is the same as in C++.
+@end
+@starter
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+int listLength(struct Node *head) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+int listLength(struct Node *head) {
+    int count = 0;
+    for (struct Node *cur = head; cur != NULL; cur = cur->next) count++;
+    return count;
+}
+@end
+@helpers
+struct Node *build(int *values, int n) {
+    struct Node *head = NULL;
+    for (int i = n - 1; i >= 0; i--) {
+        struct Node *nd = malloc(sizeof(struct Node));
+        nd->data = values[i];
+        nd->next = head;
+        head = nd;
+    }
+    return head;
+}
+void destroy(struct Node *head) {
+    while (head != NULL) { struct Node *t = head; head = head->next; free(t); }
+}
+@end
+@hint Walk with a separate pointer cur = head, add 1 per node, and stop when cur is NULL.
+@test three nodes
+int v[] = {10, 20, 30};
+struct Node *h = build(v, 3);
+printf("%d\n", listLength(h));
+destroy(h);
+@expect
+3
+@end
+@test empty list
+printf("%d\n", listLength(NULL));
+@expect
+0
+@end
+@hidden one node
+int v[] = {7};
+struct Node *h = build(v, 1);
+printf("%d\n", listLength(h));
+destroy(h);
+@expect
+1
+@end
+
+@challenge Add at the front
+@level 2
+@text
+Write a function pushFront that adds a new node holding value at the front of the list. It receives the address of the caller's head pointer (struct Node **), because the head has to change.
+
+Create the node with malloc, point it at the old first node, then make the head point at it.
+@end
+@starter
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+void pushFront(struct Node **head, int value) {
+    // your code here
+}
+@end
+@solution
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+void pushFront(struct Node **head, int value) {
+    struct Node *n = malloc(sizeof(struct Node));
+    n->data = value;
+    n->next = *head;
+    *head = n;
+}
+@end
+@helpers
+void show(struct Node *head) {
+    for (struct Node *c = head; c != NULL; c = c->next) printf("%d ", c->data);
+    printf("\n");
+}
+void destroy(struct Node *head) {
+    while (head != NULL) { struct Node *t = head; head = head->next; free(t); }
+}
+@end
+@hint Order matters: n->next = *head must happen before *head = n.
+@test into an empty list
+struct Node *h = NULL;
+pushFront(&h, 5);
+show(h);
+destroy(h);
+@expect
+5 
+@end
+@test three times
+struct Node *h = NULL;
+pushFront(&h, 1);
+pushFront(&h, 2);
+pushFront(&h, 3);
+show(h);
+destroy(h);
+@expect
+3 2 1 
+@end
+@hidden the head really changes
+struct Node *h = NULL;
+pushFront(&h, 9);
+printf("%d\n", h != NULL && h->data == 9);
+destroy(h);
+@expect
+1
+@end
+
+@challenge Free the whole list
+@level 3
+@text
+Write a function freeList that frees every node of the list and then sets the caller's head pointer to NULL. Not a single node may be left behind: this challenge checks for memory leaks.
+
+Remember to read a node's next pointer before you free the node.
+@end
+@starter
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+void freeList(struct Node **head) {
+    // your code here
+}
+@end
+@solution
+#include <stdio.h>
+#include <stdlib.h>
+
+struct Node {
+    int data;
+    struct Node *next;
+};
+
+void freeList(struct Node **head) {
+    struct Node *cur = *head;
+    while (cur != NULL) {
+        struct Node *next = cur->next;
+        free(cur);
+        cur = next;
+    }
+    *head = NULL;
+}
+@end
+@noleaks
+@helpers
+struct Node *build(int n) {
+    struct Node *head = NULL;
+    for (int i = 0; i < n; i++) {
+        struct Node *nd = malloc(sizeof(struct Node));
+        nd->data = i;
+        nd->next = head;
+        head = nd;
+    }
+    return head;
+}
+@end
+@hint Save cur->next in a variable, free(cur), then move on to the saved pointer. At the end set *head = NULL.
+@test four nodes
+struct Node *h = build(4);
+freeList(&h);
+printf("%s\n", h == NULL ? "empty" : "not empty");
+@expect
+empty
+@end
+@test an empty list
+struct Node *h = NULL;
+freeList(&h);
+printf("%s\n", h == NULL ? "empty" : "not empty");
+@expect
+empty
+@end
+@hidden a long list
+struct Node *h = build(50);
+freeList(&h);
+printf("ok\n");
+@expect
+ok
+@end

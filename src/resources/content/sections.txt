@@ -12,6 +12,7 @@
 @topic basics_casting.txt | Type conversion and casting | Mixing int and double, truncation, and explicit casts
 @topic basics_io_c.txt | Input and output in C | printf format specifiers and reading input with scanf
 @topic basics_io_cpp.txt | Input and output in C++ | cout and cin, and how they differ from printf and scanf
+@challenges challenge_basics.txt
 @exam exam_basics.txt
 
 @section Control flow | if/else, switch, loops and patterns
@@ -20,6 +21,7 @@
 @topic control_loops.txt | Loops | while, do-while and for, plus break and continue
 @topic control_nested.txt | Nested loops | Loops inside loops: patterns, tables and how break behaves
 @topic control_patterns.txt | Common loop patterns | Accumulating, counting, digits, primes and input checking
+@challenges challenge_control.txt
 @exam exam_control.txt
 
 @section Arrays and strings | Arrays, 2D arrays and strings
@@ -28,6 +30,7 @@
 @topic arrays_2d.txt | Two-dimensional arrays | Rows, columns and nested loops
 @topic strings_basics.txt | Strings as char arrays | The terminating '\0' and working with characters
 @topic strings_library.txt | String functions | strlen, strcpy, strcat and strcmp
+@challenges challenge_arrays.txt
 @exam exam_arrays.txt
 
 @section Functions | Functions, pass by value and by reference
@@ -36,6 +39,7 @@
 @topic functions_recursion.txt | Recursion | Functions that call themselves, base cases and the call stack
 @topic functions_passing.txt | Pass by value and by reference | Value, pointer and C++ reference parameters, and const
 @topic functions_cpp.txt | C++ extras: overloading and defaults | Same-name functions and default argument values
+@challenges challenge_functions.txt
 @exam exam_functions.txt
 
 @section Pointers and memory | Addresses, pointer arithmetic, dynamic memory
@@ -44,6 +48,7 @@
 @topic pointers_arrays.txt | Pointers and arrays | Pointer arithmetic and arrays as parameters
 @topic pointers_double.txt | Pointers to pointers | int ** and changing a pointer from a function
 @topic pointers_dynamic.txt | Dynamic memory | malloc, free, new and delete
+@challenges challenge_pointers.txt
 @exam exam_pointers.txt
 
 @section Linked lists | Nodes, insert, delete and freeing a list in C++
@@ -52,6 +57,7 @@
 @topic list_insert_end.txt | Insert at the end | Why a function needs Node**, and walking to the last node
 @topic list_delete.txt | Search and delete | Finding a value, unlinking a node with a prev pointer, and delete
 @topic list_free.txt | Freeing a list | Memory leaks, deleting every node, and the use-after-delete trap
+@challenges challenge_lists.txt
 @exam exam_lists.txt
 
 @section Classes and operators | Classes, constructors, operator overloading and list classes

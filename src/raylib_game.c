@@ -50,6 +50,7 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [SETTINGS] = { InitSettingsScreen, UpdateSettingsScreen, DrawSettingsScreen, UnloadSettingsScreen, FinishSettingsScreen },
     [PROGRESS] = { InitProgressScreen, UpdateProgressScreen, DrawProgressScreen, UnloadProgressScreen, FinishProgressScreen },
     [VISUALIZER] = { InitVisualizerScreen, UpdateVisualizerScreen, DrawVisualizerScreen, UnloadVisualizerScreen, FinishVisualizerScreen },
+    [CHALLENGE]  = { InitChallengeScreen,  UpdateChallengeScreen,  DrawChallengeScreen,  UnloadChallengeScreen,  FinishChallengeScreen },
 };
 
 // Fade transition state
@@ -102,6 +103,7 @@ int main(void)
     }
 
     screens[currentScreen].unload();
+    UnloadAllChallenges();
 
     UnloadFonts();
     CloseWindow();

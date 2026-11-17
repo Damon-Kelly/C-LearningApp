@@ -1,0 +1,195 @@
+# Coding challenges for "Pointers and memory". Format: see challenge.h. Checked by tools/verify_content.py.
+
+@challenge String length with a pointer
+@level 1
+@text
+Write a function strlenPtr that returns the length of the string s, like strlen does, without calling strlen and without using [ ].
+
+Move a pointer along the string until it reaches the '\0' at the end.
+@end
+@starter
+int strlenPtr(const char *s) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int strlenPtr(const char *s) {
+    const char *p = s;
+    while (*p != '\0') p++;
+    return p - s;
+}
+@end
+@forbid [ | This challenge practises pointers: use *p and p++ instead of [ ].
+@forbid strlen( | Write it yourself instead of calling strlen.
+@hint Keep a second pointer p = s, move it with p++ while *p is not '\0', then return p - s.
+@test a word
+printf("%d\n", strlenPtr("hello"));
+@expect
+5
+@end
+@test with spaces
+printf("%d\n", strlenPtr("C is fun"));
+@expect
+8
+@end
+@test empty string
+printf("%d\n", strlenPtr(""));
+@expect
+0
+@end
+@hidden one character
+printf("%d\n", strlenPtr("x"));
+@expect
+1
+@end
+
+@challenge Reverse an array with pointers
+@level 2
+@text
+Write a function reverseArray that reverses the n ints starting at a, in place, using only pointer arithmetic: no [ ].
+
+Use one pointer to the first element and one to the last, swap what they point to, and move them towards each other.
+@end
+@starter
+void reverseArray(int *a, int n) {
+    // your code here
+}
+@end
+@solution
+void reverseArray(int *a, int n) {
+    int *left = a;
+    int *right = a + n - 1;
+    while (left < right) {
+        int t = *left;
+        *left = *right;
+        *right = t;
+        left++;
+        right--;
+    }
+}
+@end
+@forbid [ | This challenge practises pointer arithmetic: use *left, *right, ++ and -- instead of [ ].
+@helpers
+void show(int *a, int n) {
+    for (int *p = a; p < a + n; p++) printf("%d ", *p);
+    printf("\n");
+}
+@end
+@hint int *left = a; int *right = a + n - 1; then loop while (left < right).
+@test odd length
+int a[] = {1, 2, 3, 4, 5};
+reverseArray(a, 5);
+show(a, 5);
+@expect
+5 4 3 2 1
+@end
+@test even length
+int a[] = {8, 6, 4, 2};
+reverseArray(a, 4);
+show(a, 4);
+@expect
+2 4 6 8
+@end
+@hidden one element
+int a[] = {3};
+reverseArray(a, 1);
+show(a, 1);
+@expect
+3
+@end
+
+@challenge Smallest and largest at once
+@level 2
+@text
+A function can only return one value, but it can fill in several through pointers. Write minMax, which finds the smallest and largest of the n ints in a and stores them in *min and *max.
+@end
+@starter
+void minMax(int *a, int n, int *min, int *max) {
+    // your code here
+}
+@end
+@solution
+void minMax(int *a, int n, int *min, int *max) {
+    *min = a[0];
+    *max = a[0];
+    for (int i = 1; i < n; i++) {
+        if (a[i] < *min) *min = a[i];
+        if (a[i] > *max) *max = a[i];
+    }
+}
+@end
+@hint Start both at a[0]. Write through the pointers: *min = ..., not min = ...
+@test mixed values
+int a[] = {4, -2, 9, 0};
+int lo, hi;
+minMax(a, 4, &lo, &hi);
+printf("%d %d\n", lo, hi);
+@expect
+-2 9
+@end
+@test all the same
+int a[] = {5, 5, 5};
+int lo, hi;
+minMax(a, 3, &lo, &hi);
+printf("%d %d\n", lo, hi);
+@expect
+5 5
+@end
+@hidden one element
+int a[] = {-7};
+int lo, hi;
+minMax(a, 1, &lo, &hi);
+printf("%d %d\n", lo, hi);
+@expect
+-7 -7
+@end
+
+@challenge Make a range on the heap
+@level 3
+@text
+Write a function makeRange that creates an array of n ints with malloc, fills it with 0, 1, 2, ..., n - 1, and returns the pointer. The caller frees it.
+
+A local array would not work here: it stops existing when the function returns.
+@end
+@starter
+#include <stdlib.h>
+
+int *makeRange(int n) {
+    // your code here
+    return NULL;
+}
+@end
+@solution
+#include <stdlib.h>
+
+int *makeRange(int n) {
+    int *a = malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) a[i] = i;
+    return a;
+}
+@end
+@noleaks
+@hint malloc(n * sizeof(int)) gives room for n ints. Fill it with a loop and return it.
+@test five numbers
+int *a = makeRange(5);
+for (int i = 0; i < 5; i++) printf("%d ", a[i]);
+printf("\n");
+free(a);
+@expect
+0 1 2 3 4 
+@end
+@test one number
+int *a = makeRange(1);
+printf("%d\n", a[0]);
+free(a);
+@expect
+0
+@end
+@hidden the last one is n - 1
+int *a = makeRange(100);
+printf("%d\n", a[99]);
+free(a);
+@expect
+99
+@end

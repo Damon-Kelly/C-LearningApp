@@ -4,6 +4,7 @@
 #include "progress.h"     // completed / best score badges
 #include "content.h"
 #include "exam_hooks.h"
+#include "challenge.h"
 
 static GameScreen finishScreen = UNKNOWN;
 
@@ -16,15 +17,27 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 #define ROW_HEIGHT   78.0f
 
 #define EXAM_COLOR   ((Color){ 214, 124, 30, 255 })
+#define CHALLENGE_COLOR UI_ACCENT2
 
 static UiScroll listScroll = { 0 };
 #define LIST_TRACK ((Rectangle){ 912, LIST_TOP, 6, LIST_BOTTOM - LIST_TOP })
 static int scrollSection = -1;      // the section the scroll position belongs to, so returning from a lesson keeps the place
 
-// Topics first, then (if the section has one) the exam as the last row
+// Topics first, then the coding challenges, then (if the section has one) the exam as the last row
+static int ChallengeRows(void)
+{
+    const ChallengeSet *set = SectionChallenges(selectedSection);
+    return set ? set->count : 0;
+}
+
 static int RowCount(const SectionDef *section)
 {
-    return section->topicCount + (section->examFile[0] != '\0' ? 1 : 0);
+    return section->topicCount + ChallengeRows() + (section->examFile[0] != '\0' ? 1 : 0);
+}
+
+static const char *LevelWord(int level)
+{
+    return level <= 1 ? "Warm-up" : level == 2 ? "Practice" : "Harder";
 }
 
 static float MaxScroll(const SectionDef *section)
@@ -72,6 +85,11 @@ void UpdateTopicsScreen(void)
                 selectedTopic = i;
                 finishScreen = LESSON;
             }
+            else if (i < section->topicCount + ChallengeRows())
+            {
+                selectedChallenge = i - section->topicCount;
+                finishScreen = CHALLENGE;
+            }
             else if (ExamUnlocked(selectedSection)) finishScreen = EXAM;
         }
     }
@@ -94,10 +112,13 @@ void DrawTopicsScreen(void)
         Rectangle r = RowRect(i);
         if (r.y + r.height < LIST_TOP || r.y > LIST_BOTTOM) continue;
 
-        bool isExam = (i >= section->topicCount);
+        int ci = i - section->topicCount;
+        bool isChallenge = (ci >= 0 && ci < ChallengeRows());
+        bool isExam = (i >= section->topicCount + ChallengeRows());
+        const Challenge *ch = isChallenge ? &SectionChallenges(selectedSection)->items[ci] : NULL;
         bool enabled = !isExam || ExamUnlocked(selectedSection);
         bool hover = enabled && InList() && CheckCollisionPointRec(GetMousePosition(), r);
-        Color accent = isExam ? EXAM_COLOR : UI_ACCENT;
+        Color accent = isExam ? EXAM_COLOR : isChallenge ? CHALLENGE_COLOR : UI_ACCENT;
 
         // A card: glow and border on hover, a round badge on the left, title and summary
         if (hover) DrawRectangleRounded((Rectangle){ r.x - 3, r.y - 3, r.width + 6, r.height + 6 }, 0.14f, 8, Fade(accent, 0.22f));
@@ -107,7 +128,8 @@ void DrawTopicsScreen(void)
         // Progress (from the partner's progress tracking): passed turns the badge green with a tick
         AttemptStats stats;
         bool tried = isExam ? ProgressGetStats(ATTEMPT_EXAM, section->name, "", &stats)
-                            : ProgressGetStats(ATTEMPT_QUIZ, section->name, section->topics[i].file, &stats);
+                   : isChallenge ? ProgressGetStats(ATTEMPT_QUIZ, section->name, ChallengeKey(section->challengeFile, ci), &stats)
+                   : ProgressGetStats(ATTEMPT_QUIZ, section->name, section->topics[i].file, &stats);
         bool passed = tried && stats.passed;
 
         Vector2 c = { r.x + 38, r.y + r.height/2 };
@@ -119,16 +141,18 @@ void DrawTopicsScreen(void)
         }
         else
         {
-            const char *badge = isExam ? "Exam" : TextFormat("%d", i + 1);
-            Vector2 bs = UiMeasureText(badge, isExam ? 14 : 20);
-            UiText(badge, (Vector2){ c.x - bs.x/2, c.y - bs.y/2 }, isExam ? 14 : 20, enabled ? WHITE : UI_MUTED);
+            const char *badge = isExam ? "Exam" : isChallenge ? "{ }" : TextFormat("%d", i + 1);
+            float bsize = isExam ? 14 : isChallenge ? 18 : 20;
+            Vector2 bs = UiMeasureText(badge, bsize);
+            UiText(badge, (Vector2){ c.x - bs.x/2, c.y - bs.y/2 }, bsize, enabled ? WHITE : UI_MUTED);
         }
 
         // "Completed 4/5" / "Passed 8/10" in green, or "Best 3/5" while not passed yet
         float badgeW = 0;
         if (tried)
         {
-            const char *text = TextFormat("%s  %d/%d", passed ? (isExam ? "Passed" : "Completed") : "Best", stats.bestScore, stats.bestTotal);
+            const char *text = (isChallenge && passed) ? "Solved"
+                             : TextFormat("%s  %d/%d", passed ? (isExam ? "Passed" : "Completed") : "Best", stats.bestScore, stats.bestTotal);
             Vector2 ts = UiMeasureText(text, 16);
             badgeW = ts.x + 24;
             Rectangle pill = { r.x + r.width - 44 - badgeW, r.y + r.height/2 - 14, badgeW, 28 };
@@ -138,10 +162,11 @@ void DrawTopicsScreen(void)
             UiText(text, (Vector2){ pill.x + 12, pill.y + (pill.height - ts.y)/2 }, 16, pc);
         }
 
-        const char *title = isExam ? "Section exam" : section->topics[i].title;
+        const char *title = isExam ? "Section exam" : isChallenge ? TextFormat("Challenge: %s", ch->title) : section->topics[i].title;
         const char *summary = isExam ? (enabled ? "Test yourself on the whole section. Retry as often as you like."
                                                 : "Finish the quizzes in this section's topics to unlock the exam.")
-                                     : section->topics[i].summary;
+                            : isChallenge ? TextFormat("%s - write the code, then run the tests on it", LevelWord(ch->level))
+                            : section->topics[i].summary;
         UiTextFit(title, (Vector2){ r.x + 76, r.y + 14 }, 22, r.width - 140 - badgeW, enabled ? UI_TEXT : UI_MUTED);
         UiTextFit(summary, (Vector2){ r.x + 76, r.y + 46 }, 16, r.width - 140 - badgeW, UI_MUTED);
         UiText(">", (Vector2){ r.x + r.width - 30, r.y + r.height/2 - 13 }, 24, hover ? accent : UI_BORDER);

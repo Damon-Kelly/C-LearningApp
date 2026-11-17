@@ -52,7 +52,9 @@ PROJECT_SOURCE_FILES  ?= \
     memview.c \
     cinterp.c \
     editor.c \
-    screen_visualizer.c
+    screen_visualizer.c \
+    challenge.c \
+    screen_challenge.c
 
 # raylib library variables
 RAYLIB_PATH           ?= C:/raylib/raylib

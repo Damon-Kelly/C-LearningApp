@@ -13,10 +13,12 @@
 #include "screens.h"
 #include "ui.h"
 #include "content.h"
+#include "challenge.h"
 #include "progress.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>     // atoi
 #include <time.h>
 
 static GameScreen finishScreen = UNKNOWN;
@@ -147,6 +149,15 @@ static const char *TopicTitle(const char *sectionName, const char *file)
         const SectionDef *s = GetSection(i);
         if (strcmp(s->name, sectionName) != 0) continue;
         for (int t = 0; t < s->topicCount; t++) if (strcmp(s->topics[t].file, file) == 0) return s->topics[t].title;
+
+        // A coding challenge is stored as "challenge_<section>.txt#n"
+        size_t len = strlen(s->challengeFile);
+        const ChallengeSet *set = SectionChallenges(i);
+        if (set != NULL && len > 0 && strncmp(file, s->challengeFile, len) == 0 && file[len] == '#')
+        {
+            int n = atoi(file + len + 1);
+            if (n >= 1 && n <= set->count) return TextFormat("Challenge: %s", set->items[n - 1].title);
+        }
     }
     return file;
 }
@@ -313,6 +324,21 @@ void DrawProgressScreen(void)
             default: examText = "No exam for this section"; break;
         }
         UiText(examText, (Vector2){ r.x + 14, r.y + 44 }, 14, examColor);
+
+        // Coding challenges solved, on the right of the same line
+        const ChallengeSet *set = SectionChallenges(shown[i]);
+        if (set != NULL && set->count > 0)
+        {
+            int solved = 0;
+            for (int c = 0; c < set->count; c++)
+            {
+                AttemptStats cs;
+                if (ProgressGetStats(ATTEMPT_QUIZ, s->name, ChallengeKey(s->challengeFile, c), &cs) && cs.passed) solved++;
+            }
+            const char *ct = TextFormat("Challenges %d/%d", solved, set->count);
+            Vector2 cts = UiMeasureText(ct, 14);
+            UiText(ct, (Vector2){ r.x + r.width - 14 - cts.x, r.y + 44 }, 14, solved == set->count ? UI_GOOD : UI_MUTED);
+        }
     }
     EndScissorMode();
 
