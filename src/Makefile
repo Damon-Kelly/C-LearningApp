@@ -39,6 +39,7 @@ PROJECT_SOURCE_FILES  ?= \
     screen_topics.c \
     screen_profile.c \
     screen_settings.c \
+    screen_progress.c \
     screen_exam.c \
     exam_hooks.c \
     screen_lesson.c \

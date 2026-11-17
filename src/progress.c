@@ -240,6 +240,31 @@ bool ProgressGetStats(AttemptKind kind, const char *section, const char *topic, 
     return out->attempts > 0;
 }
 
+int ProgressRecent(AttemptRecord *out, int max)
+{
+    if (!EnsureLoaded()) return 0;
+
+    int n = 0;
+    for (int i = attemptCount - 1; i >= 0 && n < max; i--)
+    {
+        const Attempt *a = &attempts[i];
+        out[n].kind = a->kind;
+        out[n].time = a->time;
+        snprintf(out[n].section, sizeof(out[n].section), "%s", a->section);
+        snprintf(out[n].topic, sizeof(out[n].topic), "%s", a->topic);
+        out[n].score = a->score;
+        out[n].total = a->total;
+        out[n].passed = a->passed;
+        n++;
+    }
+    return n;
+}
+
+int ProgressAttemptCount(void)
+{
+    return EnsureLoaded() ? attemptCount : 0;
+}
+
 void ProgressUnload(void)
 {
     attemptCount = 0;

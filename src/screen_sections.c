@@ -6,6 +6,7 @@
 static GameScreen finishScreen = UNKNOWN;
 
 static const Rectangle backButton     = { 60, 480, 140, 40 };       // acts as "Log out"
+static const Rectangle progressButton = { 500, 480, 120, 40 };
 static const Rectangle profileButton  = { 640, 480, 120, 40 };
 static const Rectangle settingsButton = { 780, 480, 120, 40 };
 
@@ -37,6 +38,7 @@ void UpdateSectionsScreen(void)
         }
     }
 
+    if (UiButtonClicked(progressButton)) finishScreen = PROGRESS;
     if (UiButtonClicked(profileButton)) finishScreen = PROFILE;
     if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
 
@@ -77,6 +79,7 @@ void DrawSectionsScreen(void)
     }
 
     UiButtonDrawEx(backButton, "Log out", UI_MUTED, true);
+    UiButtonDraw(progressButton, "Progress");
     UiButtonDraw(profileButton, "Profile");
     UiButtonDraw(settingsButton, "Settings");
 }

@@ -48,6 +48,7 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [EXAM]     = { InitExamScreen,     UpdateExamScreen,     DrawExamScreen,     UnloadExamScreen,     FinishExamScreen },
     [PROFILE]  = { InitProfileScreen,  UpdateProfileScreen,  DrawProfileScreen,  UnloadProfileScreen,  FinishProfileScreen },
     [SETTINGS] = { InitSettingsScreen, UpdateSettingsScreen, DrawSettingsScreen, UnloadSettingsScreen, FinishSettingsScreen },
+    [PROGRESS] = { InitProgressScreen, UpdateProgressScreen, DrawProgressScreen, UnloadProgressScreen, FinishProgressScreen },
 };
 
 // Fade transition state
