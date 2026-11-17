@@ -5,7 +5,9 @@
 
 static GameScreen finishScreen = UNKNOWN;
 
-static const Rectangle backButton = { 60, 480, 140, 40 };
+static const Rectangle backButton     = { 60, 480, 140, 40 };       // acts as "Log out"
+static const Rectangle profileButton  = { 640, 480, 120, 40 };
+static const Rectangle settingsButton = { 780, 480, 120, 40 };
 
 // Two columns of cards, room for 4 rows (8 sections) above the Back button.
 // Add a row of space here if you ever need more than 8 sections.
@@ -15,7 +17,7 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 
 static Rectangle CardRect(int i)
 {
-    return (Rectangle){ 60.0f + (i % 2)*430.0f, 100.0f + (i / 2)*CARD_PITCH, CARD_W, CARD_H };
+    return (Rectangle){ 60.0f + (i % 2)*430.0f, 112.0f + (i / 2)*CARD_PITCH, CARD_W, CARD_H };
 }
 
 void InitSectionsScreen(void)
@@ -35,16 +37,21 @@ void UpdateSectionsScreen(void)
         }
     }
 
+    if (UiButtonClicked(profileButton)) finishScreen = PROFILE;
+    if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
+
+    // Going back to the title screen logs the user out
     if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TITLE;
 }
 
 void DrawSectionsScreen(void)
 {
     UiDrawHeader("Sections");
+    UiDrawLoggedInAs();
 
     if (GetContentError()[0] != '\0')
     {
-        UiDrawWrappedText(TextFormat("Problem loading sections.txt: %s", GetContentError()), (Rectangle){ 60, 110, 840, 200 }, 20, UI_BAD);
+        UiDrawWrappedText(TextFormat("Problem loading sections.txt: %s", GetContentError()), (Rectangle){ 60, 112, 840, 200 }, 20, UI_BAD);
     }
 
     for (int i = 0; i < GetSectionCount(); i++)
@@ -69,7 +76,9 @@ void DrawSectionsScreen(void)
         UiDrawWrappedText(section->description, (Rectangle){ r.x + 16, r.y + 44, r.width - 32, 34 }, 16, UI_MUTED);
     }
 
-    UiButtonDrawEx(backButton, "Back", UI_MUTED, true);
+    UiButtonDrawEx(backButton, "Log out", UI_MUTED, true);
+    UiButtonDraw(profileButton, "Profile");
+    UiButtonDraw(settingsButton, "Settings");
 }
 
 void UnloadSectionsScreen(void)
