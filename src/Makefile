@@ -45,6 +45,8 @@ PROJECT_SOURCE_FILES  ?= \
     content.c \
     ui.c \
     users.c \
+    progress.c \
+    review.c \
     codepanel.c \
     memview.c
 

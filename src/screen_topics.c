@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "content.h"
 #include "exam_hooks.h"
+#include "progress.h"
 
 static GameScreen finishScreen = UNKNOWN;
 
@@ -15,6 +16,14 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 #define ROW_HEIGHT   56.0f
 
 #define EXAM_COLOR   ((Color){ 214, 124, 30, 255 })
+
+// Small text at the right end of a row: "Completed 4/5", "Best 3/5" (or "Passed" for an exam)
+static void DrawBadge(Rectangle row, const AttemptStats *stats, const char *passedWord)
+{
+    const char *badge = TextFormat("%s  %d/%d", stats->passed ? passedWord : "Best", stats->bestScore, stats->bestTotal);
+    Vector2 size = UiMeasureText(badge, 16);
+    UiText(badge, (Vector2){ row.x + row.width - size.x - 16, row.y + (row.height - size.y)/2.0f }, 16, WHITE);
+}
 
 static float scrollY = 0.0f;
 static int scrollSection = -1;      // the section scrollY belongs to, so returning from a lesson keeps the place
@@ -100,13 +109,21 @@ void DrawTopicsScreen(void)
         if (i < section->topicCount)
         {
             const TopicRef *topic = &section->topics[i];
-            UiButtonDraw(r, topic->title);
+
+            // A topic whose quiz was passed turns green and shows the best score
+            AttemptStats stats;
+            bool tried = ProgressGetStats(ATTEMPT_QUIZ, section->name, topic->file, &stats);
+            UiButtonDrawEx(r, topic->title, (tried && stats.passed) ? UI_GOOD : UI_ACCENT, true);
+            if (tried) DrawBadge(r, &stats, "Completed");
             UiText(topic->summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
         }
         else
         {
             bool unlocked = ExamUnlocked(selectedSection);
             UiButtonDrawEx(r, "Section exam", unlocked ? EXAM_COLOR : UI_MUTED, unlocked);
+
+            AttemptStats stats;
+            if (ProgressGetStats(ATTEMPT_EXAM, section->name, "", &stats)) DrawBadge(r, &stats, "Passed");
             const char *summary = unlocked ? "Test yourself on the whole section. Retry as often as you like."
                                            : "Finish the quizzes in this section's topics to unlock the exam.";
             UiText(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);

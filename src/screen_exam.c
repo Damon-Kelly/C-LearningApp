@@ -14,6 +14,7 @@
 #include "content.h"
 #include "codepanel.h"
 #include "exam_hooks.h"
+#include "review.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +32,13 @@
 static const Rectangle backButton = { 60, 480, 140, 40 };
 static const Rectangle nextButton = { 720, 480, 180, 40 };
 static const Rectangle startButton = { 390, 380, 180, 48 };
-static const Rectangle retryButton = { 405, 410, 150, 44 };
+static const Rectangle reviewButton = { 470, 410, 190, 44 };
+
+// With mistakes to review, "Try again" moves left to make room for "Review answers"
+static Rectangle RetryRect(void)
+{
+    return (ReviewMissedCount() > 0) ? (Rectangle){ 300, 410, 150, 44 } : (Rectangle){ 405, 410, 150, 44 };
+}
 
 //----------------------------------------------------------------------------------
 // State
@@ -55,6 +62,9 @@ static bool answered = false;
 static bool lastCorrect = false;
 static int selected = -1;                   // shown position of the clicked option
 static char typed[MAX_ANSWER_LEN] = "";
+static int pickedOption[MAX_EXAM_QUESTIONS];                // per question: option index picked (choice questions)
+static char typedAnswers[MAX_EXAM_QUESTIONS][MAX_ANSWER_LEN];   // per question: what was typed
+static bool reviewing = false;              // stepping through the missed questions
 static unsigned attemptCounter = 0;
 static unsigned rngState = 1;
 
@@ -121,6 +131,10 @@ static void StartAttempt(void)
 
     total = ExamDraw(&exam, order, MAX_EXAM_QUESTIONS, rngState);
     memset(correctAt, 0, sizeof(correctAt));
+    memset(typedAnswers, 0, sizeof(typedAnswers));
+    for (int i = 0; i < MAX_EXAM_QUESTIONS; i++) pickedOption[i] = -1;
+    reviewing = false;
+    ReviewClear();
     qIndex = 0;
     score = 0;
     phase = PHASE_QUESTION;
@@ -135,14 +149,50 @@ static void RecordAnswer(bool correct)
     if (correct) score++;
 }
 
+// Called once when the last question has been answered: sets up the review and reports the attempt
+static void FinishAttempt(void)
+{
+    QuestionResult results[MAX_EXAM_QUESTIONS];
+
+    phase = PHASE_RESULT;
+    bool passed = (score*100 >= exam.passPercent*total);
+    ReviewClear();
+
+    for (int i = 0; i < total; i++)
+    {
+        const ExamQuestion *q = &exam.pool[order[i]];
+        results[i] = (QuestionResult){ q->prompt, correctAt[i] };
+
+        ReviewItem item = { 0 };
+        item.number = i + 1;
+        item.prompt = q->prompt;
+        item.code = q->code;
+        item.lang = q->lang;
+        item.why = q->why;
+        item.wasCorrect = correctAt[i];
+
+        if (q->kind == EXAM_TYPED)
+        {
+            item.typed = true;
+            snprintf(item.typedAnswer, sizeof(item.typedAnswer), "%s", typedAnswers[i]);
+            item.modelAnswer = q->shown;
+        }
+        else
+        {
+            item.optionCount = q->optionCount;
+            for (int j = 0; j < q->optionCount; j++) item.options[j] = q->options[j];
+            item.correct = q->correct;
+            item.picked = pickedOption[i];
+        }
+        ReviewAdd(&item);
+    }
+
+    OnExamFinished(selectedSection, score, total, passed, results, total);
+}
+
 static void GoToNext(void)
 {
-    if (qIndex + 1 >= total)
-    {
-        phase = PHASE_RESULT;
-        bool passed = (score*100 >= exam.passPercent*total);
-        OnExamFinished(selectedSection, score, total, passed);
-    }
+    if (qIndex + 1 >= total) FinishAttempt();
     else
     {
         qIndex++;
@@ -176,6 +226,7 @@ static void UpdateChoice(const ExamQuestion *q)
         if (UiButtonClicked(ChoiceRect(q, i)) || IsKeyPressed(KEY_ONE + i))
         {
             selected = i;
+            pickedOption[qIndex] = optionMap[i];
             RecordAnswer(optionMap[i] == q->correct);
             break;
         }
@@ -207,14 +258,50 @@ static void DrawChoice(const ExamQuestion *q)
 
         float belowCode = codeY + codeHeight + 10.0f;
         if (answered) UiDrawWrappedText(TextFormat("%s %s", verdict, why), (Rectangle){ PAGE_LEFT, belowCode, 500, CONTENT_BOTTOM - belowCode }, 18, lastCorrect ? UI_GOOD : UI_TEXT);
-        else DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, 1.8f, UI_MUTED);
+        else UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, belowCode }, 18, UI_MUTED);
     }
     else
     {
         float y = ChoiceRect(q, q->optionCount).y + 2;
         if (answered) UiDrawWrappedText(TextFormat("%s %s", verdict, why), (Rectangle){ PAGE_LEFT, y, 640, CONTENT_BOTTOM - y }, 18, lastCorrect ? UI_GOOD : UI_TEXT);
-        else DrawTextEx(font, "Click an answer or press 1-4", (Vector2){ PAGE_LEFT, y + 2 }, 18, 1.8f, UI_MUTED);
+        else UiText("Click an answer or press 1-4", (Vector2){ PAGE_LEFT, y + 2 }, 18, UI_MUTED);
     }
+}
+
+//----------------------------------------------------------------------------------
+// Typed-answer text box (kept in this file so it cannot clash with other UI code)
+//----------------------------------------------------------------------------------
+// Edits buf with printable ASCII and backspace; returns true on the frame Enter is pressed.
+static bool ExamInputUpdate(char *buf, int size)
+{
+    int len = (int)strlen(buf);
+
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        if (key >= 32 && key <= 126 && len < size - 1)
+        {
+            buf[len++] = (char)key;
+            buf[len] = '\0';
+        }
+        key = GetCharPressed();
+    }
+
+    if ((IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && len > 0) buf[len - 1] = '\0';
+
+    return IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER);
+}
+
+static void ExamInputDraw(Rectangle bounds, const char *buf, bool active)
+{
+    DrawRectangleRounded(bounds, 0.2f, 8, WHITE);
+    DrawRectangleLinesEx(bounds, 2.0f, active ? UI_ACCENT : UI_MUTED);
+
+    Vector2 size = MeasureTextEx(monoFont, buf, CODE_FONT_SIZE, 0);
+    Vector2 pos = { bounds.x + 12, bounds.y + (bounds.height - (float)CODE_FONT_SIZE)/2.0f };
+    DrawTextEx(monoFont, buf, pos, CODE_FONT_SIZE, 0, UI_TEXT);
+
+    if (active && ((int)(GetTime()*2.0) % 2 == 0)) DrawRectangle((int)(pos.x + size.x + 2), (int)pos.y, 2, CODE_FONT_SIZE, UI_TEXT);
 }
 
 //----------------------------------------------------------------------------------
@@ -246,9 +333,10 @@ static void UpdateTyped(const ExamQuestion *q)
         return;
     }
 
-    bool enter = UiTextInputUpdate(typed, MAX_ANSWER_LEN);
+    bool enter = ExamInputUpdate(typed, MAX_ANSWER_LEN);
     if ((enter || UiButtonClicked(TypedSubmitRect(q))) && typed[0] != '\0')
     {
+        snprintf(typedAnswers[qIndex], MAX_ANSWER_LEN, "%s", typed);
         RecordAnswer(ExamAnswerMatches(q, typed));
     }
 }
@@ -267,7 +355,7 @@ static void DrawTyped(const ExamQuestion *q)
 
     Rectangle input = TypedInputRect(q);
     Rectangle submit = TypedSubmitRect(q);
-    UiTextInputDraw(input, typed, !answered);
+    ExamInputDraw(input, typed, !answered);
     UiButtonDrawEx(submit, "Check", UI_ACCENT, !answered && typed[0] != '\0');
 
     if (input.y + input.height > bottom) bottom = input.y + input.height;
@@ -304,6 +392,7 @@ void InitExamScreen(void)
 {
     finishScreen = UNKNOWN;
     phase = PHASE_INTRO;
+    reviewing = false;
     LoadCurrentExam();
 }
 
@@ -313,12 +402,20 @@ void UpdateExamScreen(void)
     {
         LoadCurrentExam();
         phase = PHASE_INTRO;
+        reviewing = false;
         return;
     }
 
     if (!loaded)
     {
         if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TOPICS;
+        return;
+    }
+
+    // While reviewing mistakes, only the review reacts (Esc and its buttons)
+    if (reviewing)
+    {
+        if (ReviewUpdate()) reviewing = false;
         return;
     }
 
@@ -341,7 +438,8 @@ void UpdateExamScreen(void)
         } break;
         case PHASE_RESULT:
         {
-            if (UiButtonClicked(retryButton)) StartAttempt();
+            if (UiButtonClicked(RetryRect())) StartAttempt();
+            else if (ReviewMissedCount() > 0 && UiButtonClicked(reviewButton) && ReviewOpen()) reviewing = true;
         } break;
     }
 
@@ -356,13 +454,19 @@ void DrawExamScreen(void)
     {
         UiDrawHeader("Could not load this exam");
         float bottom = UiDrawWrappedText(loadError, (Rectangle){ PAGE_LEFT, 110, CONTENT_WIDTH, 250 }, 20, UI_BAD);
-        DrawTextEx(font, "Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, 2.0f, UI_MUTED);
+        UiText("Fix the file, then press F5 to try again.", (Vector2){ PAGE_LEFT, bottom + 16 }, 20, UI_MUTED);
         UiButtonDrawEx(backButton, "Topics", UI_MUTED, true);
         return;
     }
 
     UiDrawHeader(exam.title);
     float cx = GAME_WIDTH/2.0f;
+
+    if (reviewing)
+    {
+        ReviewDraw();
+        return;
+    }
 
     switch (phase)
     {
@@ -386,7 +490,7 @@ void DrawExamScreen(void)
         {
             const ExamQuestion *q = CurrentQuestion();
 
-            DrawTextEx(font, TextFormat("Question %d of %d", qIndex + 1, total), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, 1.6f, UI_MUTED);
+            UiText(TextFormat("Question %d of %d", qIndex + 1, total), (Vector2){ PAGE_LEFT, CONTENT_TOP - 2 }, 16, UI_MUTED);
             UiDrawWrappedText(q->prompt, (Rectangle){ PAGE_LEFT, PROMPT_Y, CONTENT_WIDTH, 70 }, 22, UI_TEXT);
 
             if (q->kind == EXAM_CHOICE) DrawChoice(q);
@@ -410,12 +514,13 @@ void DrawExamScreen(void)
                 Vector2 c = ResultDot(i);
                 DrawCircleV(c, 20, correctAt[i] ? UI_GOOD : UI_BAD);
                 const char *label = TextFormat("%d", i + 1);
-                Vector2 size = MeasureTextEx(font, label, 20, 2.0f);
-                DrawTextEx(font, label, (Vector2){ c.x - size.x/2.0f, c.y - size.y/2.0f }, 20, 2.0f, WHITE);
+                Vector2 size = UiMeasureText(label, 20);
+                UiText(label, (Vector2){ c.x - size.x/2.0f, c.y - size.y/2.0f }, 20, WHITE);
             }
             UiDrawTextCentered("green = correct, red = missed", cx, 372, 16, UI_MUTED);
 
-            UiButtonDraw(retryButton, "Try again");
+            UiButtonDraw(RetryRect(), "Try again");
+            if (ReviewMissedCount() > 0) UiButtonDraw(reviewButton, "Review answers");
             UiButtonDrawEx(backButton, "Topics", UI_MUTED, true);
         } break;
     }
