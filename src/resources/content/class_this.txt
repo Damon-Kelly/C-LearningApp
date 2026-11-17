@@ -1,0 +1,186 @@
+# Classes: this, *this, const member functions and const references.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic this and const
+@summary The this pointer, returning *this, const methods and const references
+
+#---------------------------------------------------------------------------
+@page explain The this pointer
+@text
+Inside a member function, this is a pointer to the object the function was called on. When you call b.setLength(5), this holds the address of b. Usually you do not need to write it, because a plain member name already means this->name.
+@end
+@code cpp
+class Box {
+    double length;
+public:
+    void setLength(double length) {
+        this->length = length;
+    }
+    double getLength() { return length; }
+};
+
+int main() {
+    Box b;
+    b.setLength(5.0);
+    cout << b.getLength() << endl;
+    return 0;
+}
+@output
+5
+@end
+@text
+Here the parameter has the same name as the member, so inside the function plain length means the parameter (it shadows the member). this->length says clearly "the member of this object". Without this, length = length; would just assign the parameter to itself.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Returning *this
+@text
+this is a pointer, so *this is the object itself. A member function can return *this by reference, which lets you chain calls on the same object.
+@end
+@code cpp
+class Counter {
+    int n = 0;
+public:
+    Counter& add(int k) {
+        n += k;
+        return *this;
+    }
+    int get() { return n; }
+};
+
+int main() {
+    Counter c;
+    c.add(2).add(3).add(5);
+    cout << c.get() << endl;
+    return 0;
+}
+@output
+10
+@end
+@text
+c.add(2) returns a reference to c itself, so .add(3) is called on c again, and so on. The return type Counter& matters: returning Counter (no &) would return a copy, and the later calls would change the copy instead of c. You will see return *this again in overloaded operators such as ++ and =.
+@end
+
+#---------------------------------------------------------------------------
+@page explain const member functions
+@text
+Writing const after a member function's parameter list promises that the function does not change the object. The compiler enforces it: assigning to a member inside a const function is an error. Getters should be const.
+@end
+@code cpp
+class Box {
+    double length = 2.0;
+public:
+    double getLength() const { return length; }
+    void grow() { length *= 2; }
+};
+
+void report(const Box& b) {
+    cout << b.getLength() << endl;
+}
+
+int main() {
+    Box b;
+    b.grow();
+    report(b);
+    return 0;
+}
+@output
+4
+@end
+@text
+report takes a const Box&: a reference, so no copy is made, and const, so report may not change the box. On a const object you may only call const member functions. getLength is marked const, so the call is allowed. Calling b.grow() inside report would be a compile error.
+@end
+@text
+Your notes use the same idea in operator+(const Box& b): the other box is passed by const reference because it is only read. Getting into the habit of marking getters const avoids confusing errors later.
+@end
+
+#---------------------------------------------------------------------------
+@page trace this points at the caller
+@code cpp
+class P { public:
+    int x;
+    void set(int x) { this->x = x; } };
+P a, b;
+a.set(4);
+b.set(9);
+@end
+@step 4
+@cell a.x int ? 1000
+@cell b.x int ? 1004
+@note Two objects, each with its own x.
+@step 5
+@cell a.x int 4 1000
+@cell b.x int ? 1004
+@cell this P* ->a.x 2000
+@note During a.set(4), this holds the address of a, so this->x is a.x.
+@step 6
+@cell a.x int 4 1000
+@cell b.x int 9 1004
+@cell this P* ->b.x 2000
+@note During b.set(9), the same code runs, but now this points at b. One function, different objects.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+class C { int n = 1; public:
+    C& twice() { n *= 2; return *this; }
+    C copyTwice() { n *= 2; return *this; }
+    int get() const { return n; } };
+C c;
+c.twice().twice();
+c.copyTwice().copyTwice();
+cout << c.get() << endl;
+@output
+8
+@end
+@option 16
+@option 8
+@option 4
+@option 2
+@answer 2
+@why twice returns a reference, so both calls change c: 1, 2, 4. copyTwice returns a copy, so only the first call changes c (to 8), and the second call doubles the temporary copy.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Inside a member function, what is this?
+@opt A copy of the object
+@opt A pointer to the object the function was called on
+@opt The class name
+@opt The first parameter
+@correct 2
+@why this holds the address of the calling object, so *this is the object itself.
+
+@q A setter has a parameter called length, and the class has a member called length. How do you assign to the member?
+@opt length = length;
+@opt this->length = length;
+@opt Box.length = length;
+@opt *length = length;
+@correct 2
+@why The parameter shadows the member. this->length names the member explicitly.
+
+@q What does const after a member function, as in int get() const, promise?
+@opt The function returns a constant
+@opt The function does not change the object
+@opt The function can only be called once
+@opt The function is private
+@correct 2
+@why The compiler rejects changes to data members inside a const member function.
+
+@q Why does a chainable function return Counter& rather than Counter?
+@opt It is faster to type
+@opt Returning a reference lets the next call act on the same object, not a copy
+@opt Counter cannot be returned by value
+@opt To make it const
+@correct 2
+@why A returned copy would receive the later calls, so the original would not change.
+
+@q Why pass an object as const Box& b to a function that only reads it?
+@opt It avoids copying, and the function cannot change the object
+@opt It makes the object private
+@opt It is required by the compiler
+@opt It deletes the object afterwards
+@correct 1
+@why A reference avoids the copy, and const protects the caller's object.

@@ -1,0 +1,239 @@
+# Classes: constructors and destructors.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Constructors and destructors
+@summary Setting up an object when it is created, and cleaning up when it dies
+
+#---------------------------------------------------------------------------
+@page explain Constructors
+@text
+A constructor is a special member function that runs automatically when an object is created. It has the same name as the class and no return type, not even void. Its job is to give the object a valid starting state.
+@end
+@code cpp
+class Box {
+    double length, width;
+public:
+    Box(double l, double w) {
+        length = l;
+        width = w;
+    }
+    double area() { return length * width; }
+};
+
+int main() {
+    Box b(3.0, 4.0);
+    cout << b.area() << endl;
+    return 0;
+}
+@output
+12
+@end
+@text
+Box b(3.0, 4.0); creates the object and passes 3.0 and 4.0 to the constructor. There is no way to forget to set the sizes, because the object cannot be created without them.
+@end
+@text
+A constructor that takes no arguments is the default constructor. If you write no constructor at all, the compiler supplies an empty one. But once you write any constructor, it no longer does, so with only Box(double, double) defined, the line Box b; is an error.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Default arguments and initialiser lists
+@text
+Default arguments let one constructor serve several cases. The Clock in your notes uses Clock(int h = 12, int m = 0), so a Clock made with no arguments shows noon.
+@end
+@code cpp
+class Clock {
+    int hour, minute;
+public:
+    Clock(int h = 12, int m = 0) : hour(h), minute(m) {}
+    void show() { cout << hour << ":" << minute << endl; }
+};
+
+int main() {
+    Clock a;
+    Clock b(9);
+    Clock c(15, 30);
+    a.show(); b.show(); c.show();
+    return 0;
+}
+@output
+12:0
+9:0
+15:30
+@end
+@text
+The part after the colon, : hour(h), minute(m), is a member initialiser list. It initialises the members directly instead of assigning to them in the body. The body here is empty, {}, because there is nothing left to do. Initialiser lists are the preferred style, and they are required for const members and references.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Destructors
+@text
+A destructor runs automatically when an object is destroyed. It has the class name with a ~ in front, takes no arguments and has no return type. For a local object, that happens when its block ends.
+@end
+@code cpp
+class Noisy {
+    int id;
+public:
+    Noisy(int i) : id(i) { cout << "make " << id << endl; }
+    ~Noisy() { cout << "destroy " << id << endl; }
+};
+
+int main() {
+    Noisy a(1);
+    {
+        Noisy b(2);
+    }
+    Noisy c(3);
+    return 0;
+}
+@output
+make 1
+make 2
+destroy 2
+make 3
+destroy 3
+destroy 1
+@end
+@text
+b dies at the end of the inner braces. At the end of main, the remaining objects are destroyed in the reverse order they were created: c, then a.
+@end
+@text
+The main use of a destructor is to release what the object owns. A class that creates memory with new in its constructor should delete it in its destructor. A linked list class does exactly this: its destructor frees every node, so the user can never leak them.
+@end
+@code cpp
+class Buffer {
+    int* data;
+public:
+    Buffer(int n) { data = new int[n]; }
+    ~Buffer() { delete[] data; }
+};
+
+int main() {
+    Buffer b(100);
+    return 0;
+}
+@end
+
+#---------------------------------------------------------------------------
+@page explain Objects on the heap
+@text
+An object can also be created with new, which runs the constructor and returns a pointer. Members are then reached with the arrow, as with struct pointers. The destructor runs when you delete the pointer, not at the end of the block.
+@end
+@code cpp
+class Noisy {
+    int id;
+public:
+    Noisy(int i) : id(i) { cout << "make " << id << endl; }
+    ~Noisy() { cout << "destroy " << id << endl; }
+    void hello() { cout << "hello " << id << endl; }
+};
+
+int main() {
+    Noisy* p = new Noisy(7);
+    p->hello();
+    delete p;
+    cout << "end" << endl;
+    return 0;
+}
+@output
+make 7
+hello 7
+destroy 7
+end
+@end
+@text
+If you forget delete p, the destructor never runs and the memory leaks. That is why it helps to let a local object own the heap memory: its destructor is called automatically.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Constructor with defaults
+@code cpp
+class Clock { public:
+    int hour, minute;
+    Clock(int h = 12, int m = 0)
+        : hour(h), minute(m) {} };
+Clock a;
+Clock b(9, 45);
+a.minute = 5;
+@end
+@step 5
+@cell a.hour int 12 1000
+@cell a.minute int 0 1004
+@note No arguments were given, so the constructor used both defaults: h = 12 and m = 0.
+@step 6
+@cell a.hour int 12 1000
+@cell a.minute int 0 1004
+@cell b.hour int 9 1008
+@cell b.minute int 45 1012
+@note b was given both values, so no defaults were needed. The initialiser list copied them into the members.
+@step 7
+@cell a.hour int 12 1000
+@cell a.minute int 5 1004
+@cell b.hour int 9 1008
+@cell b.minute int 45 1012
+@note The members are public in this example, so main can change a.minute directly. In a real class they would usually be private.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct T { char c;
+    T(char x) : c(x) { cout << c; }
+    ~T() { cout << c; } };
+int main() {
+    T a('A');
+    { T b('B'); }
+    T c('C');
+}
+@output
+ABBCCA
+@end
+@option ABCABC
+@option ABBCCA
+@option ABCCBA
+@option ABC
+@answer 2
+@why A is made, then B is made and destroyed at the end of its braces. C is made, and at the end of main the rest are destroyed in reverse order: C, then A.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What is the return type of a constructor?
+@opt void
+@opt The class type
+@opt int
+@opt It has no return type
+@correct 4
+@why Constructors and destructors are written with no return type at all.
+
+@q A class defines only Box(double l, double w). What happens with Box b; ?
+@opt b gets zero sizes
+@opt It is a compile error, because there is no default constructor
+@opt The compiler adds a default constructor
+@opt b is a null pointer
+@correct 2
+@why Once you write any constructor, the compiler stops supplying a default one.
+
+@q How is the destructor of class Box written?
+@opt Box()
+@opt ~Box()
+@opt delete Box()
+@opt !Box()
+@correct 2
+@why The destructor is the class name with a tilde in front.
+
+@q When does the destructor of a local object run?
+@opt When the program starts
+@opt When the block it was declared in ends
+@opt Only when you call it
+@opt Never
+@correct 2
+@why Local objects are destroyed automatically at the end of their scope.
+
+@q Noisy* p = new Noisy(1); When does this object's destructor run?
+@opt At the end of the block
+@opt When delete p runs
+@opt Immediately after new
+@opt When p is set to nullptr
+@correct 2
+@why Heap objects live until they are deleted. Forgetting delete means the destructor never runs.

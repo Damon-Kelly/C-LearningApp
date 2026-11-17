@@ -1,0 +1,186 @@
+# Basics: operators.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Operators
+@summary Arithmetic, integer division, shortcuts, comparisons and logic
+
+#---------------------------------------------------------------------------
+@page explain Arithmetic and integer division
+@text
+The arithmetic operators are + - * / and %. The surprise is division: when both sides are integers, the result is an integer and the decimal part is thrown away. The % operator gives the remainder, and works only on integers.
+@end
+@code c
+printf("%d %d %d\n", 7 + 2, 7 * 2, 7 - 2);
+printf("%d %d\n", 7 / 2, 7 % 2);
+printf("%.1f\n", 7.0 / 2);
+@output
+9 14 5
+3 1
+3.5
+@end
+@text
+7 / 2 is 3 because both are ints, and 7 % 2 is the 1 left over. As soon as one side is a double, as in 7.0 / 2, the division keeps its decimal part.
+@end
+@text
+A useful pair: for positive numbers, (a / b) * b + (a % b) always gives back a. The remainder is how you test for even numbers (n % 2 == 0) or wrap around a range.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Shortcuts: += and ++
+@text
+Updating a variable is so common that C has shortcuts. x += 5 means x = x + 5, and the same works for -=, *=, /= and %=.
+@end
+@code c
+int x = 10;
+x += 5;
+x *= 2;
+x -= 3;
+printf("%d\n", x);
+@output
+27
+@end
+@text
+++ and -- add or subtract one. Written after the variable (i++), the old value is used in the expression and then i changes. Written before (++i), i changes first and the new value is used.
+@end
+@code c
+int i = 5;
+int a = i++;
+int b = ++i;
+printf("%d %d %d\n", a, b, i);
+@output
+5 7 7
+@end
+@text
+a received 5, the value before the increment, and then i became 6. Then ++i made i 7 first, so b is 7. On a line of their own, i++ and ++i do exactly the same thing.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Comparison and logic
+@text
+Comparison operators are <, >, <=, >=, == (equal) and != (not equal). In C the result is an int: 1 for true and 0 for false. Any non-zero value counts as true when tested.
+@end
+@code c
+int a = 5, b = 8;
+printf("%d %d %d\n", a < b, a == b, a != b);
+printf("%d %d\n", a < b && b < 10, a > b || b > 10);
+printf("%d\n", !(a < b));
+@output
+1 0 1
+1 0
+0
+@end
+@text
+Combine tests with && (and), || (or) and ! (not). && and || stop as soon as the answer is known: in a && b, if a is false then b is never evaluated.
+@end
+@text
+The most common beginner bug: = assigns and == compares. The condition if (x = 5) assigns 5 to x and is always true. You almost always want if (x == 5).
+@end
+
+#---------------------------------------------------------------------------
+@page explain Precedence
+@text
+When an expression has several operators, some bind tighter than others. * / % come before + -, comparisons come after arithmetic, && comes before ||, and = comes last. Parentheses override everything and make your intent clear.
+@end
+@code c
+printf("%d %d\n", 2 + 3 * 4, (2 + 3) * 4);
+printf("%d\n", 2 + 3 * 4 % 5);
+@output
+14 20
+4
+@end
+@text
+In the second line, * and % have the same precedence and go left to right: 3 * 4 is 12, then 12 % 5 is 2, and finally 2 + 2 is 4. When you are not sure, add parentheses.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Step by step
+@code c
+int x = 7;
+int y = x / 2;
+int r = x % 2;
+x += y;
+y++;
+@end
+@step 1
+@cell x int 7 1000
+@note x holds 7.
+@step 2
+@cell x int 7 1000
+@cell y int 3 1004
+@note Both sides are int, so 7 / 2 is 3 and the .5 is dropped.
+@step 3
+@cell x int 7 1000
+@cell y int 3 1004
+@cell r int 1 1008
+@note 7 % 2 is the remainder of the division, 1.
+@step 4
+@cell x int 10 1000
+@cell y int 3 1004
+@cell r int 1 1008
+@note x += y means x = x + y, so x becomes 7 + 3 = 10.
+@step 5
+@cell x int 10 1000
+@cell y int 4 1004
+@cell r int 1 1008
+@note y++ adds one to y.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int a = 17, b = 5;
+int back = a / b * b + a % b;
+printf("%d %d %d\n", a / b, a % b, back);
+@output
+3 2 17
+@end
+@option 3 2 15
+@option 3 2 17
+@option 3.4 2 17
+@option 4 2 17
+@answer 2
+@why 17 / 5 is 3 and 17 % 5 is 2. Then 3 * 5 + 2 is 17: the quotient and remainder always rebuild the original number.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What is 9 / 2 when both numbers are ints?
+@opt 4.5
+@opt 5
+@opt 4
+@opt 4.0
+@correct 3
+@why Integer division drops the decimal part.
+
+@q What does 13 % 5 evaluate to?
+@opt 2
+@opt 3
+@opt 2.6
+@opt 8
+@correct 2
+@why 13 = 2 * 5 + 3, so the remainder is 3.
+
+@q After int i = 3; int a = i++;, what are a and i?
+@opt a is 3, i is 4
+@opt a is 4, i is 4
+@opt a is 3, i is 3
+@opt a is 4, i is 3
+@correct 1
+@why i++ gives the old value to a first and then increases i.
+
+@q What is the difference between = and ==?
+@opt They are the same
+@opt = compares, == assigns
+@opt = assigns, == compares
+@opt == is only for strings
+@correct 3
+@why One equals sign stores a value. Two equals signs ask whether two values are equal.
+
+@q What is 1 + 2 * 3?
+@opt 9
+@opt 7
+@opt 6
+@opt 5
+@correct 2
+@why Multiplication binds tighter than addition: 2 * 3 is 6, plus 1 is 7.

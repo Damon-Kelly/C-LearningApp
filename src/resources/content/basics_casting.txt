@@ -1,0 +1,176 @@
+# Basics: type conversion and casting.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Type conversion and casting
+@summary Mixing int and double, truncation, and explicit casts
+
+#---------------------------------------------------------------------------
+@page explain Mixing types
+@text
+When an operator has an int on one side and a double on the other, C converts the int to a double first and does the calculation as doubles. When both sides are int, nothing is converted and the division is an integer division, even if you store the result in a double.
+@end
+@code c
+int a = 7, b = 2;
+double d = a / b;
+printf("%.1f\n", d);
+@output
+3.0
+@end
+@text
+The division a / b happens first, as ints, giving 3. Only then is 3 converted to 3.0 and stored in d. The decimal part was already lost.
+@end
+@text
+To keep it, convert one operand to double before the division with a cast: write the type in parentheses in front of the value.
+@end
+@code c
+int a = 7, b = 2;
+double d = (double)a / b;
+printf("%.1f\n", d);
+@output
+3.5
+@end
+@text
+(double)a turns a into 7.0, then the division is double / int, which is done as doubles. Notice the cast applies only to a, not to the whole division. (double)(a / b) would still give 3.0.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Casting down: truncation
+@text
+Converting a double to an int cuts off the decimal part. It does not round: it moves toward zero.
+@end
+@code c
+printf("%d %d\n", (int)3.99, (int)-3.99);
+@output
+3 -3
+@end
+@text
+To round a positive number to the nearest whole number, add 0.5 before casting.
+@end
+@code c
+double x = 2.6;
+printf("%d %d\n", (int)x, (int)(x + 0.5));
+@output
+2 3
+@end
+@text
+Casting between char and int just changes how the same number is read. (char)66 is the character 'B', and (int)'z' is its code 122.
+@end
+@code c
+printf("%c %d\n", (char)66, (int)'z');
+@output
+B 122
+@end
+
+#---------------------------------------------------------------------------
+@page explain A classic bug, and C++ casts
+@text
+Computing an average from two ints is where this bites most often.
+@end
+@code c
+int sum = 17, count = 4;
+double bad = sum / count;
+double good = (double)sum / count;
+printf("%.2f %.2f\n", bad, good);
+@output
+4.00 4.25
+@end
+@text
+bad divides two ints first, so the .25 vanishes. good casts before dividing. Whenever you divide ints and want a decimal answer, cast one of them.
+@end
+@text
+C++ accepts the C-style cast too, but also offers static_cast, which is easier to spot and search for.
+@end
+@code cpp
+int a = 7, b = 2;
+cout << static_cast<double>(a) / b << endl;
+@output
+3.5
+@end
+
+#---------------------------------------------------------------------------
+@page trace Where the decimal part goes
+@code c
+int a = 7;
+int b = 2;
+double r1 = a / b;
+double r2 = (double)a / b;
+@end
+@step 1
+@cell a int 7 1000
+@note a holds 7.
+@step 2
+@cell a int 7 1000
+@cell b int 2 1004
+@note b holds 2.
+@step 3
+@cell a int 7 1000
+@cell b int 2 1004
+@cell r1 double 3.0 1008
+@note a / b is an integer division and gives 3. That 3 is then stored in the double as 3.0. The .5 is already gone.
+@step 4
+@cell a int 7 1000
+@cell b int 2 1004
+@cell r1 double 3.0 1008
+@cell r2 double 3.5 1016
+@note (double)a makes a temporary 7.0, so the division is done with decimals and gives 3.5. The variable a itself is still the int 7.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int a = 5, b = 2;
+double x = a / b + 0.5;
+printf("%.1f\n", x);
+@output
+2.5
+@end
+@option 3.0
+@option 3.5
+@option 2.5
+@option 2.0
+@answer 3
+@why a / b is an integer division and gives 2. Adding 0.5 then gives 2.5. The 0.5 in 5 / 2 was lost before the addition.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Why does double d = 7 / 2; store 3.0?
+@opt double cannot hold 3.5
+@opt 7 / 2 is an integer division and gives 3 before it is stored
+@opt printf rounds the value
+@opt The compiler makes a mistake
+@correct 2
+@why The division happens as ints first. The result 3 is converted to a double afterwards.
+
+@q Which expression gives 3.5?
+@opt (double)(7 / 2)
+@opt 7 / 2
+@opt (double)7 / 2
+@opt (int)3.5
+@correct 3
+@why Casting 7 to double before the division makes it a decimal division.
+
+@q What is (int)-2.9?
+@opt -3
+@opt -2
+@opt -2.9
+@opt 2
+@correct 2
+@why Casting to int cuts off the decimals toward zero, it does not round.
+
+@q What is (int)(4.6 + 0.5)?
+@opt 4
+@opt 5
+@opt 4.6
+@opt 6
+@correct 2
+@why 4.6 + 0.5 is 5.1, and casting to int keeps 5. This is the usual trick for rounding.
+
+@q What is (char)67?
+@opt '6'
+@opt 'A'
+@opt 'C'
+@opt 'D'
+@correct 3
+@why 65 is 'A', so 67 is 'C'.

@@ -1,0 +1,150 @@
+# Arrays: declaring, indexing, looping, bounds.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Arrays: the basics
+@summary Declaring, indexing and looping over arrays
+
+#---------------------------------------------------------------------------
+@page explain One name, many values
+@text
+An array holds a fixed number of values of the same type, stored one after another in memory. You pick one with an index in square brackets. Indexes start at 0, so an array of 4 elements has indexes 0 to 3.
+@end
+@code c
+int scores[4] = {90, 75, 60, 85};
+printf("%d\n", scores[0]);
+printf("%d\n", scores[3]);
+scores[1] = 80;
+printf("%d\n", scores[1]);
+@output
+90
+85
+80
+@end
+@text
+You can leave out some values (the rest become 0), or leave out the size and let the compiler count the list. sizeof(array) / sizeof(array[0]) gives the number of elements.
+@end
+@code c
+int a[5] = {1, 2};
+int b[] = {3, 4, 5};
+printf("%d %d %d\n", a[1], a[4], b[2]);
+printf("%zu\n", sizeof(b) / sizeof(b[0]));
+@output
+2 0 5
+3
+@end
+@text
+An array declared with no initial values, like int a[3];, holds garbage until you write to it.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Looping and staying in bounds
+@text
+A for loop is the natural way to visit every element: start at 0 and stop before the size.
+@end
+@code c
+int a[5] = {2, 4, 6, 8, 10};
+int sum = 0;
+for (int i = 0; i < 5; i++) {
+    sum += a[i];
+}
+printf("sum = %d\n", sum);
+@output
+sum = 30
+@end
+@text
+C never checks the index for you. For a 5-element array, a[5] or a[-1] is outside the array: the program may crash, or quietly read or overwrite some other variable. This is called undefined behaviour. The usual mistake is writing i <= 5 instead of i < 5.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Changing elements
+@code c
+int a[3] = {4, 5, 6};
+a[0] = a[1] + a[2];
+a[2] = a[0] - 1;
+a[1]++;
+@end
+@step 1
+@cell a[0] int 4 1000
+@cell a[1] int 5 1004
+@cell a[2] int 6 1008
+@note The three elements sit side by side in memory.
+@step 2
+@cell a[0] int 11 1000
+@cell a[1] int 5 1004
+@cell a[2] int 6 1008
+@note a[1] + a[2] is 5 + 6 = 11, stored in a[0].
+@step 3
+@cell a[0] int 11 1000
+@cell a[1] int 5 1004
+@cell a[2] int 10 1008
+@note a[0] is now 11, so a[2] becomes 11 - 1 = 10.
+@step 4
+@cell a[0] int 11 1000
+@cell a[1] int 6 1004
+@cell a[2] int 10 1008
+@note a[1]++ adds one to that single element.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int a[4] = {1, 2, 3, 4};
+int i = 0;
+while (i < 3) {
+    a[i + 1] = a[i + 1] + a[i];
+    i++;
+}
+printf("%d\n", a[3]);
+@output
+10
+@end
+@option 10
+@option 4
+@option 6
+@option 9
+@answer 1
+@why Each step adds the previous element into the next one, so the array becomes 1, 3, 6, 10. The values build up as the loop moves along.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q For int a[6]; which is the last valid index?
+@opt 6
+@opt 5
+@opt 7
+@opt 0
+@correct 2
+@why Indexes run from 0 to size - 1, so 0 to 5.
+
+@q How many elements does int a[] = {7, 8, 9}; have?
+@opt 2
+@opt 3
+@opt 4
+@opt Unknown, it is an error
+@correct 2
+@why With no size given, the compiler counts the values in the list.
+
+@q After int a[5] = {1, 2}; what is a[4]?
+@opt Garbage
+@opt 2
+@opt 0
+@opt It is a compile error
+@correct 3
+@why When some values are given, the remaining elements are set to 0.
+
+@q What happens if you write a[10] = 1 on an array of 5 ints?
+@opt The array grows
+@opt The compiler always stops you
+@opt Undefined behaviour: it writes outside the array
+@opt It wraps around to a[0]
+@correct 3
+@why C does not check bounds, so the write lands in memory that is not part of the array.
+
+@q Which loop visits every element of int a[n] exactly once?
+@opt for (int i = 0; i <= n; i++)
+@opt for (int i = 1; i < n; i++)
+@opt for (int i = 0; i < n; i++)
+@opt for (int i = 0; i < n - 1; i++)
+@correct 3
+@why Start at 0 and stop when i reaches n. The other loops run off the end or skip an element.

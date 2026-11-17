@@ -141,7 +141,7 @@ int t = *a;
 What does this program print?
 @end
 @code c
-void f(int *p, int v) { *p = *p + v; v = 100; }
+void f(int *p, int v) { *p += v; v = 100; }
 
 int main(void) {
     int a = 1, b = 2;
@@ -156,7 +156,7 @@ int main(void) {
 @option 1 2
 @option 101 2
 @answer 1
-@why p holds the address of a, so *p = *p + v makes a = 1 + 2 = 3. v is only a copy of b, so v = 100 changes nothing outside f and b stays 2.
+@why p holds the address of a, so *p += v makes a = 1 + 2 = 3. v is only a copy of b, so v = 100 changes nothing outside f and b stays 2.
 
 #---------------------------------------------------------------------------
 @page quiz Check your understanding

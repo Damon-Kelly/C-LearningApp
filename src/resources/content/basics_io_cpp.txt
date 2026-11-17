@@ -1,0 +1,141 @@
+# Basics: input and output in C++.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Input and output in C++
+@summary cout and cin, and how they differ from printf and scanf
+
+#---------------------------------------------------------------------------
+@page explain Printing with cout
+@text
+C++ prints with cout and the << operator. You chain values left to right, and each one is printed in a form that suits its type, so there are no format specifiers to match. endl ends the line.
+@end
+@code cpp
+int n = 42;
+string name = "Ana";
+cout << "Hello " << name << ", n = " << n << endl;
+cout << 3.5 << " " << 'x' << endl;
+@output
+Hello Ana, n = 42
+3.5 x
+@end
+@text
+cout needs #include <iostream> and a way to name it: either using namespace std; at the top, or std::cout everywhere. The lessons here assume the using line.
+@end
+@text
+To control decimals, add #include <iomanip> and use fixed with setprecision.
+@end
+@code cpp
+double x = 3.14159;
+cout << fixed << setprecision(2) << x << endl;
+@output
+3.14
+@end
+
+#---------------------------------------------------------------------------
+@page explain Reading with cin
+@text
+cin >> reads a value into a variable. Unlike scanf there is no format string and no &: the type of the variable decides how the text is converted.
+@end
+@code cpp
+int age;
+cout << "Age? ";
+cin >> age;
+cout << "Next year: " << age + 1 << endl;
+@end
+@text
+cin >> skips whitespace and reads one item, so a string variable gets one word. You can chain it to read several values: cin >> a >> b.
+@end
+@text
+To read a whole line with spaces, use getline(cin, variable).
+@end
+@code cpp
+string line;
+getline(cin, line);
+cout << "You typed: " << line << endl;
+@end
+@text
+The same leftover new line trap exists: after cin >> age, the Enter key is still in the input, so a getline right afterwards returns an empty line. Call cin.ignore() in between to throw that new line away.
+@end
+
+#---------------------------------------------------------------------------
+@page trace What cin does
+@code cpp
+int a;
+string s;
+cin >> a >> s;
+a = a * 2;
+@end
+@step 1
+@cell a int ? 1000
+@note a is declared but has no value yet.
+@step 2
+@cell a int ? 1000
+@cell s string "" 1008
+@note A string starts out empty, unlike an int.
+@step 3
+@cell a int 21 1000
+@cell s string "hi" 1008
+@note The user types 21 hi and Enter. cin >> a reads 21, and then >> s reads the next word, hi. No & was needed.
+@step 4
+@cell a int 42 1000
+@cell s string "hi" 1008
+@note a = a * 2 doubles the stored 21.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this C++ program print?
+@end
+@code cpp
+cout << 7 / 2 << " " << 7 / 2.0 << endl;
+@output
+3 3.5
+@end
+@option 3 3
+@option 3.5 3.5
+@option 3 3.5
+@option 3.5 3
+@answer 3
+@why 7 / 2 is an integer division, so cout prints 3. 7 / 2.0 involves a double, so it prints 3.5. cout chooses the form from the type of the value.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which statement prints x in C++?
+@opt cout >> x;
+@opt cout << x;
+@opt print(x);
+@opt printf(x);
+@correct 2
+@why Output uses << (to cout) and input uses >> (from cin).
+
+@q What do you need to write before the variable in cin >> n to give its address?
+@opt &
+@opt *
+@opt Nothing, cin does not need an address
+@opt (int)
+@correct 3
+@why cin >> takes the variable itself, and the compiler arranges access to it.
+
+@q How do you read a whole line, with spaces, into a string line?
+@opt cin >> line;
+@opt getline(cin, line);
+@opt cin.read(line);
+@opt scanf("%s", line);
+@correct 2
+@why cin >> stops at whitespace. getline reads up to the end of the line.
+
+@q Which header and function set the number of decimals for cout?
+@opt <cmath> and round
+@opt <iomanip> and setprecision
+@opt <string> and decimals
+@opt <cstdio> and printf
+@correct 2
+@why setprecision (with fixed) comes from <iomanip>.
+
+@q What does endl do?
+@opt Ends the program
+@opt Ends the current output line
+@opt Clears the screen
+@opt Reads a line
+@correct 2
+@why endl moves to a new line, like \n.

@@ -1,0 +1,287 @@
+# Section exam for "Arrays and strings".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Arrays and strings exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q What does this program print?
+@code c
+int a[5] = {2, 4, 6, 8, 10};
+printf("%d\n", a[1] + a[3]);
+@end
+@opt 12
+@opt 10
+@opt 14
+@opt 6
+@correct 1
+@why a[1] is 4 and a[3] is 8. Indexes start at 0.
+
+@q What is the last valid index of int data[8]?
+@opt 8
+@opt 7
+@opt 9
+@opt 0
+@correct 2
+@why Indexes run from 0 to size - 1.
+
+@q What does this program print?
+@code c
+int g[2][3] = {{1, 2, 3}, {4, 5, 6}};
+printf("%d\n", g[1][1] + g[0][2]);
+@end
+@opt 8
+@opt 7
+@opt 6
+@opt 9
+@correct 1
+@why g[1][1] is the middle of the second row (5) and g[0][2] is the end of the first row (3).
+
+@q Why must a function that receives a 2D array be told the number of columns?
+@opt To know how many rows there are
+@opt To find where each row starts in memory
+@opt Because the array is copied
+@opt It does not need to be
+@correct 2
+@why The array is stored row after row, so the column count is needed to jump from one row to the next.
+
+@q What does this program print?
+@code c
+char s[] = "abc";
+s[1] = 'X';
+printf("%s\n", s);
+@end
+@opt aXc
+@opt abc
+@opt Xbc
+@opt abX
+@correct 1
+@why s[1] is the second character, so 'b' is replaced by 'X'.
+
+@q What is the longest string that char name[6]; can hold?
+@opt 6 letters
+@opt 5 letters
+@opt 7 letters
+@opt 4 letters
+@correct 2
+@why One of the 6 slots is needed for the terminating '\0'.
+
+@q What does this program print?
+@code c
+char s[] = "hello";
+printf("%zu %zu\n", strlen(s), sizeof(s));
+@end
+@opt 5 6
+@opt 5 5
+@opt 6 6
+@opt 6 5
+@correct 1
+@why strlen counts the 5 letters. sizeof counts the whole array, which includes the terminator.
+
+@q What does strcmp return when the two strings are equal?
+@opt 1
+@opt -1
+@opt 0
+@opt The length
+@correct 3
+@why strcmp returns 0 for equal strings, so equality is tested with == 0.
+
+@q What does this program print?
+@code c
+int a[4] = {3, 1, 4, 1};
+int count = 0;
+for (int i = 0; i < 4; i++) {
+    if (a[i] == 1) count++;
+}
+printf("%d\n", count);
+@end
+@opt 2
+@opt 1
+@opt 4
+@opt 0
+@correct 1
+@why The loop counts how many elements equal 1: a[1] and a[3].
+
+@q What does 'd' - 'a' evaluate to?
+@opt 3
+@opt 4
+@opt 100
+@opt 'd'
+@correct 1
+@why Letter codes are consecutive, so the difference is how far apart the letters are.
+
+@q What does this program print?
+@code c
+int a[3] = {5, 6, 7};
+int *p = a;
+printf("%d\n", *(p + 1) + p[2]);
+@end
+@opt 13
+@opt 12
+@opt 18
+@opt 11
+@correct 1
+@why *(p + 1) is a[1] (6) and p[2] is a[2] (7).
+
+@q Which declaration creates a table with 4 rows and 5 columns?
+@opt int t[5][4];
+@opt int t[4][5];
+@opt int t[4, 5];
+@opt int t[20];
+@correct 2
+@why The first size is rows, the second is columns.
+
+#===========================================================================
+# Typed answers. @test is compiled with the code (see tools/verify_content.py):
+#   - if the code or the test contains main, they are joined as they are
+#   - otherwise code and test are wrapped together inside main
+#===========================================================================
+@typed Fill in the blank to print the last element of a.
+@code c
+int a[6] = {1, 2, 3, 4, 5, 6};
+printf("%d\n", ____);
+@end
+@accept a[5]
+@accept *(a + 5)
+@test
+@expect
+6
+@end
+@why There are 6 elements, so the last index is 5.
+
+@typed Fill in the loop condition so the loop visits every element.
+@code c
+int a[4] = {1, 2, 3, 4};
+int sum = 0;
+for (int i = 0; ____; i++) sum += a[i];
+printf("%d\n", sum);
+@end
+@accept i < 4
+@accept i <= 3
+@accept i != 4
+@test
+@expect
+10
+@end
+@why Valid indexes are 0 to 3, so stop when i reaches 4.
+
+@typed Fill in the blank to get the number of letters in s.
+@code c
+char s[] = "hello";
+printf("%zu\n", ____);
+@end
+@accept strlen(s)
+@test
+@expect
+5
+@end
+@why strlen counts the letters up to, but not including, the terminator.
+
+@typed Copy the string "hi" into dest.
+@code c
+char dest[10];
+____
+printf("%s\n", dest);
+@end
+@accept strcpy(dest, "hi");
+@test
+@expect
+hi
+@end
+@why Arrays cannot be assigned with =, so strcpy copies the letters.
+
+@typed Fill in the condition that is true when a and b hold the same text.
+@code c
+char a[] = "yes";
+char b[] = "yes";
+if (____) printf("same\n");
+@end
+@accept strcmp(a, b) == 0
+@accept strcmp(b, a) == 0
+@accept !strcmp(a, b)
+@accept !strcmp(b, a)
+@test
+@expect
+same
+@end
+@why strcmp returns 0 when the strings are equal. a == b would compare addresses.
+
+@typed Fill in the blank to print 6.
+@code c
+int g[2][3] = {{1, 2, 3}, {4, 5, 6}};
+printf("%d\n", ____);
+@end
+@accept g[1][2]
+@test
+@expect
+6
+@end
+@why 6 is in the second row (index 1) and third column (index 2).
+
+@typed Add the statement that ends the string after 'h' and 'i'.
+@code c
+char s[4];
+s[0] = 'h';
+s[1] = 'i';
+____
+printf("%s\n", s);
+@end
+@accept s[2] = '\0';
+@accept s[2] = 0;
+@test
+@expect
+hi
+@end
+@why A string must end with the terminator '\0'.
+
+@typed Declare an array of 5 ints named nums with every element 0, in one line.
+@code c
+____
+printf("%d\n", nums[3]);
+@end
+@accept int nums[5] = {0};
+@accept int nums[5] = {0, 0, 0, 0, 0};
+@accept int nums[] = {0, 0, 0, 0, 0};
+@test
+@expect
+0
+@end
+@why {0} sets the first element to 0, and the remaining elements are set to 0 automatically.
+
+@typed Fill in the blank to finish swapping a[0] and a[1].
+@code c
+int a[2] = {1, 2};
+int t = a[0];
+a[0] = a[1];
+____
+printf("%d %d\n", a[0], a[1]);
+@end
+@accept a[1] = t;
+@test
+@expect
+2 1
+@end
+@why t holds the old a[0], which now belongs in a[1].
+
+@typed Fill in the condition so the loop stops at the end of the string.
+@code c
+char s[] = "abc";
+int n = 0;
+while (____) n++;
+printf("%d\n", n);
+@end
+@accept s[n] != '\0'
+@accept s[n] != 0
+@accept s[n]
+@test
+@expect
+3
+@end
+@why The string ends at '\0', so keep going while the current character is not the terminator.

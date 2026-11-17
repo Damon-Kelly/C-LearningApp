@@ -1,0 +1,333 @@
+# Section exam for "Linked lists".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Linked lists exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q Which expression reads member x through a pointer p to a struct?
+@opt p.x
+@opt p->x
+@opt p::x
+@opt p>x
+@correct 2
+@why The arrow follows the pointer and selects the member. It is short for (*p).x.
+
+@q What does this program print?
+@code cpp
+struct P { int x; int y; };
+P a = {1, 2};
+P b = a;
+b.x = 9;
+cout << a.x << " " << b.x << endl;
+@end
+@opt 1 9
+@opt 9 9
+@opt 1 1
+@opt 9 1
+@correct 1
+@why Assigning a struct copies its members. Changing b afterwards does not affect a.
+
+@q What does a nextPtr of nullptr mean in a linked list?
+@opt The node is empty
+@opt This is the last node
+@opt The node was deleted
+@opt The list has an error
+@correct 2
+@why nullptr marks the end of the chain.
+
+@q What does headPtr hold?
+@opt The value of the first element
+@opt The address of the first node
+@opt The number of nodes
+@opt The address of the last node
+@correct 2
+@why The head pointer is the only entry into the list.
+
+@q What does this program print?
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* h = nullptr;
+for (int v = 1; v <= 3; v++) {
+    h = new Node{v, h};
+}
+cout << h->data << " " << h->nextPtr->data;
+@end
+@opt 1 2
+@opt 3 2
+@opt 3 1
+@opt 2 1
+@correct 2
+@why Each new node goes in front, so the head is 3 and the node after it is 2.
+
+@q Why does InsertAtEnd take a Node** ptrToHeadPtr?
+@opt To make the function faster
+@opt It may have to change the caller's headPtr, for example when the list is empty
+@opt Because nodes are stored in pairs
+@opt Because Node* cannot be passed to functions
+@correct 2
+@why A plain Node* would be a copy. The address of the head pointer lets the function change the real one.
+
+@q What does this program print?
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {5}, b = {7, &c}, a = {9, &b};
+int n = 0;
+Node* cur = &a;
+while (cur != nullptr) {
+    n += cur->data; cur = cur->nextPtr;
+}
+cout << n << endl;
+@end
+@opt 21
+@opt 9
+@opt 12
+@opt 16
+@correct 1
+@why The loop visits all three nodes and adds 9 + 7 + 5.
+
+@q What does this program print?
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3}, b = {2, &c}, a = {1, &b};
+a.nextPtr = b.nextPtr;
+int n = 0;
+Node* cur = &a;
+while (cur) { n++; cur = cur->nextPtr; }
+cout << n << endl;
+@end
+@opt 1
+@opt 2
+@opt 3
+@opt 0
+@correct 2
+@why a now points straight at c, so b is skipped and the walk visits only a and c.
+
+@q Before deleting the node that curNodePtr points at, what must be done to remove it from the middle of the list?
+@opt Link the previous node to the node after it
+@opt Set headPtr to nullptr
+@opt Copy its data to the head
+@opt Nothing, delete is enough
+@correct 1
+@why Otherwise the list would still point at freed memory. The previous node has to skip over the target.
+
+@q In a loop that frees a list, why is the next pointer saved before delete?
+@opt delete clears all pointers
+@opt A deleted node's memory cannot be read safely
+@opt To keep the node alive
+@opt It makes delete faster
+@correct 2
+@why Reading nextPtr after delete is undefined behaviour.
+
+@q Which statement leaks the nodes of a 3-node list?
+@opt FreeList(&headPtr);
+@opt headPtr = nullptr;
+@opt delete tempPtr;
+@opt *ptrToHeadPtr = nullptr; after freeing each node
+@correct 2
+@why Clearing the head pointer without deleting the nodes leaves them on the heap with nothing pointing at them.
+
+@q What does this program print?
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* h = nullptr; int freed = 0;
+for (int v = 0; v < 4; v++) h = new Node{v, h};
+while (h != nullptr) {
+    Node* t = h; h = h->nextPtr;
+    delete t; freed++;
+}
+cout << freed << " " << (h == nullptr) << endl;
+@end
+@opt 3 1
+@opt 4 1
+@opt 4 0
+@opt 0 1
+@correct 2
+@why One node is deleted per pass, so freed reaches 4. The loop ends when headPtr is nullptr.
+
+@q What does a function that searches a list return when the list is empty (headPtr is nullptr)?
+@opt It crashes
+@opt false (not found), because the loop never runs
+@opt true
+@opt It depends on the value searched for
+@correct 2
+@why The walking loop's condition is false immediately, so the function reaches its final return false.
+
+#===========================================================================
+# Typed answers
+#===========================================================================
+@typed Declare a Node pointer called headPtr that starts out pointing at nothing.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+
+____
+@end
+@accept Node* headPtr = nullptr;
+@accept Node* headPtr = NULL;
+@test
+cout << (headPtr == nullptr) << endl;
+@expect
+1
+@end
+@why An empty list is represented by a head pointer set to nullptr.
+
+@typed Fill in the expression for the data member of the node that curNodePtr points to.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node n = {42, nullptr};
+Node* curNodePtr = &n;
+cout << ____ << endl;
+@end
+@accept curNodePtr->data
+@accept (*curNodePtr).data
+@test
+@expect
+42
+@end
+@why The arrow follows the pointer and then reads the member.
+
+@typed Fill in the statement that creates a new Node on the heap.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* newNode = ____;
+newNode->data = 7;
+newNode->nextPtr = nullptr;
+cout << newNode->data << endl;
+@end
+@accept new Node()
+@accept new Node
+@test
+@expect
+7
+@end
+@why new allocates a node on the heap and gives back its address.
+
+@typed Fill in the line that points the new node at the current first node.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* headPtr = new Node{2, nullptr};
+Node* newNode = new Node{1, nullptr};
+____
+headPtr = newNode;
+cout << headPtr->data;
+cout << headPtr->nextPtr->data << endl;
+@end
+@accept newNode->nextPtr = headPtr;
+@test
+@expect
+12
+@end
+@why The new node must point at the old head before the head moves, or the old nodes are lost.
+
+@typed Fill in the statement that moves the walker to the next node.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3}, b = {2, &c}, a = {1, &b};
+Node* curNodePtr = &a;
+while (curNodePtr != nullptr) {
+    cout << curNodePtr->data << endl;
+    ____
+}
+@end
+@accept curNodePtr = curNodePtr->nextPtr;
+@test
+@expect
+1
+2
+3
+@end
+@why The walker takes the next pointer of the node it is standing on.
+
+@typed Fill in the loop condition so the walker stops on the last node.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3}, b = {2, &c}, a = {1, &b};
+Node* curNodePtr = &a;
+while (____) {
+    curNodePtr = curNodePtr->nextPtr;
+}
+cout << curNodePtr->data << endl;
+@end
+@accept curNodePtr->nextPtr != nullptr
+@accept curNodePtr->nextPtr != NULL
+@accept curNodePtr->nextPtr
+@test
+@expect
+3
+@end
+@why The last node is the one whose nextPtr is nullptr, so keep walking while nextPtr is not.
+
+@typed Fill in the parameter type so AddFront can change the caller's headPtr.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+
+void AddFront(____ ptrToHeadPtr, int value) {
+    Node* n = new Node{value, *ptrToHeadPtr};
+    *ptrToHeadPtr = n;
+}
+@end
+@accept Node**
+@test
+int main() { Node* headPtr = nullptr; AddFront(&headPtr, 5); cout << headPtr->data << endl; return 0; }
+@expect
+5
+@end
+@why A pointer to the head pointer lets the function change the real head.
+
+@typed Fill in the line that unlinks the node curNodePtr from the list.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3}, b = {2, &c}, a = {1, &b};
+Node* prev = &a;
+Node* curNodePtr = &b;
+____
+cout << a.nextPtr->data << endl;
+@end
+@accept prev->nextPtr = curNodePtr->nextPtr;
+@test
+@expect
+3
+@end
+@why The previous node is made to point past the node being removed.
+
+@typed Fill in the statement that frees the unlinked node.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* prev = new Node{1, nullptr};
+Node* curNodePtr = new Node{2, nullptr};
+prev->nextPtr = curNodePtr;
+prev->nextPtr = curNodePtr->nextPtr;
+____
+cout << (prev->nextPtr == nullptr) << endl;
+@end
+@accept delete curNodePtr;
+@test
+@expect
+1
+@end
+@why After the node is unlinked, delete gives its memory back.
+
+@typed Fill in the statement that moves curNodePtr forward before the node is deleted.
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node* curNodePtr = new Node{1, new Node{2}};
+int freed = 0;
+while (curNodePtr != nullptr) {
+    Node* tempPtr = curNodePtr; ____
+    delete tempPtr; freed++;
+}
+cout << freed << endl;
+@end
+@accept curNodePtr = curNodePtr->nextPtr;
+@test
+@expect
+2
+@end
+@why Read the next pointer first. After the delete the node can no longer be used.

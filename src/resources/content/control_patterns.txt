@@ -1,0 +1,181 @@
+# Control flow: common loop patterns.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Common loop patterns
+@summary Accumulating, counting, digits, primes and input checking
+
+#---------------------------------------------------------------------------
+@page explain Accumulating and counting
+@text
+Most loops follow a few patterns. The first is the accumulator: a variable set before the loop and updated inside it. A counter is the same idea, adding one only when a test passes.
+@end
+@code c
+int a[5] = {4, 8, 15, 16, 23};
+int sum = 0, evens = 0;
+for (int i = 0; i < 5; i++) {
+    sum += a[i];
+    if (a[i] % 2 == 0) { evens++; }
+}
+printf("%d %d\n", sum, evens);
+@output
+66 3
+@end
+@text
+sum collects every element and evens counts only the even ones (4, 8 and 16). Remember to start accumulators at the right value: 0 for a sum, 1 for a product.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Taking a number apart
+@text
+When you do not know how many times to loop, use while. A classic example is going through the digits of a number: n % 10 is the last digit and n / 10 removes it.
+@end
+@code c
+int n = 4821, sum = 0;
+while (n > 0) {
+    sum += n % 10;
+    n /= 10;
+}
+printf("%d\n", sum);
+@output
+15
+@end
+@text
+The digits are taken from the right: 1, then 2, then 8, then 4, and the number shrinks 4821, 482, 48, 4, 0. When it reaches 0 the loop ends. The sum 1 + 2 + 8 + 4 is 15.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Searching, primes and checking input
+@text
+A search loop stops as soon as it has its answer. To test whether a number is prime, try every divisor from 2 upward and use break when one divides evenly. Checking up to the square root is enough.
+@end
+@code c
+int n = 29, isPrime = 1;
+for (int d = 2; d * d <= n; d++) {
+    if (n % d == 0) {
+        isPrime = 0;
+        break;
+    }
+}
+printf("%d\n", isPrime);
+@output
+1
+@end
+@text
+isPrime starts as 1 (true) and is switched to 0 the moment a divisor is found. If the loop finishes without finding one, it stays 1. This flag variable pattern is useful whenever a loop answers a yes or no question.
+@end
+@text
+Input validation uses a do-while: ask once, and keep asking while the answer is not acceptable.
+@end
+@code c
+int n;
+do {
+    printf("Enter 1-10: ");
+    scanf("%d", &n);
+} while (n < 1 || n > 10);
+@end
+
+#---------------------------------------------------------------------------
+@page trace Digits one by one
+@code c
+int n = 405;
+int sum = 0;
+while (n > 0) {
+    sum += n % 10;
+    n /= 10;
+}
+@end
+@step 1
+@cell n int 405 1000
+@note n holds 405.
+@step 2
+@cell n int 405 1000
+@cell sum int 0 1004
+@note The accumulator starts at 0.
+@step 4
+@cell n int 405 1000
+@cell sum int 5 1004
+@note n > 0 is true. 405 % 10 is the last digit, 5.
+@step 5
+@cell n int 40 1000
+@cell sum int 5 1004
+@note 405 / 10 is 40 because the division drops the .5. The last digit is gone.
+@step 4
+@cell n int 40 1000
+@cell sum int 5 1004
+@note 40 % 10 is 0, so the sum stays 5.
+@step 5
+@cell n int 4 1000
+@cell sum int 5 1004
+@note 40 / 10 is 4.
+@step 4
+@cell n int 4 1000
+@cell sum int 9 1004
+@note 4 % 10 is 4, so the sum becomes 9.
+@step 5
+@cell n int 0 1000
+@cell sum int 9 1004
+@note 4 / 10 is 0. The condition n > 0 is now false and the loop ends with sum 9.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int n = 1, steps = 0;
+while (n < 100) {
+    n *= 2;
+    steps++;
+}
+printf("%d %d\n", n, steps);
+@output
+128 7
+@end
+@option 100 7
+@option 64 6
+@option 128 7
+@option 128 6
+@answer 3
+@why n doubles: 2, 4, 8, 16, 32, 64, 128. That is 7 doublings, and 128 is the first value that is not below 100.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What should the accumulator be set to before a loop that multiplies numbers together?
+@opt 0
+@opt 1
+@opt The first number
+@opt -1
+@correct 2
+@why Starting a product at 0 would make the answer 0. 1 leaves the numbers unchanged.
+
+@q What does n % 10 give you for a positive integer n?
+@opt The last digit
+@opt The first digit
+@opt The number of digits
+@opt n divided by 10
+@correct 1
+@why The remainder after dividing by 10 is the units digit.
+
+@q What does n /= 10 do to an int n?
+@opt Divides it and keeps decimals
+@opt Drops the last digit
+@opt Multiplies by 10
+@opt Makes it zero
+@correct 2
+@why Integer division discards the remainder, so 405 becomes 40.
+
+@q Why use a do-while for input validation?
+@opt It is the only loop that can read input
+@opt The question must be asked at least once before the answer can be checked
+@opt It runs faster
+@opt It never loops forever
+@correct 2
+@why do-while checks its condition after the body, which fits ask-then-check.
+
+@q In the prime check, what is the purpose of break?
+@opt To restart the loop
+@opt To stop searching once a divisor is found
+@opt To print the result
+@opt To skip the first divisor
+@correct 2
+@why One divisor is enough to know the number is not prime, so the rest of the loop is wasted.

@@ -1,0 +1,279 @@
+# Classes: shallow vs deep copy, the copy constructor and the assignment operator.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Copy constructor and assignment
+@summary Shallow and deep copies, and copying a LinkedList safely
+
+#---------------------------------------------------------------------------
+@page explain The shallow copy problem
+@text
+When you copy an object, C++ by default copies every data member. For a pointer member, that copies the address, not the thing it points to. Both objects then share the same heap memory. This is called a shallow copy.
+@end
+@code cpp
+class Holder {
+public:
+    int* value;
+    Holder(int v) { value = new int(v); }
+};
+
+int main() {
+    Holder a(5);
+    Holder b = a;
+    *b.value = 99;
+    cout << *a.value << endl;
+    return 0;
+}
+@output
+99
+@end
+@text
+Changing b also changed a, because both value pointers hold the same address. It gets worse when the class has a destructor that deletes the memory: when a and b are destroyed, the same int is deleted twice, which is undefined behaviour and often a crash.
+@end
+@text
+A LinkedList has exactly this shape: its only member is the head pointer. A default copy would give two lists sharing one chain of nodes, and both destructors would free the same nodes.
+@end
+
+#---------------------------------------------------------------------------
+@page explain The copy constructor
+@text
+The fix is a deep copy: give the new object its own copy of the data. You do that by writing a copy constructor, a constructor that takes a const reference to another object of the same class. It runs whenever an object is created as a copy, such as Holder b = a; or when an object is passed by value.
+@end
+@code cpp
+class Holder {
+public:
+    int* value;
+    Holder(int v) { value = new int(v); }
+    Holder(const Holder& other) {
+        value = new int(*other.value);
+    }
+    ~Holder() { delete value; }
+};
+
+int main() {
+    Holder a(5);
+    Holder b = a;
+    *b.value = 99;
+    cout << *a.value << " " << *b.value << endl;
+    return 0;
+}
+@output
+5 99
+@end
+@text
+The copy constructor allocates a new int and copies the value into it. Now a and b own separate memory, changing one does not affect the other, and each destructor deletes only its own int.
+@end
+@text
+Your lecture's LinkedList copy constructor does the same for a whole list: it starts empty and then walks the other list, inserting a copy of each value at the end.
+@end
+@code cpp
+class Node {
+public:
+    int data;
+    Node* next;
+    Node(int v) : data(v), next(nullptr) {}
+};
+
+class LinkedList {
+    Node* head;
+public:
+    LinkedList() { head = nullptr; }
+    LinkedList(const LinkedList& other) {
+        head = nullptr;
+        Node* current = other.head;
+        while (current != nullptr) {
+            insertAtEnd(current->data);
+            current = current->next;
+        }
+    }
+    ~LinkedList() {
+        while (head) { Node* t = head; head = head->next; delete t; }
+    }
+    void insertAtEnd(int v) {
+        Node* n = new Node(v);
+        if (!head) { head = n; return; }
+        Node* cur = head;
+        while (cur->next) cur = cur->next;
+        cur->next = n;
+    }
+    void setFirst(int v) { head->data = v; }
+    void display() const {
+        for (Node* c = head; c; c = c->next)
+            cout << (c == head ? "" : " ") << c->data;
+        cout << endl;
+    }
+};
+
+int main() {
+    LinkedList a;
+    a.insertAtEnd(1);
+    a.insertAtEnd(2);
+    LinkedList b = a;
+    b.setFirst(100);
+    a.display();
+    b.display();
+    return 0;
+}
+@output
+1 2
+100 2
+@end
+
+#---------------------------------------------------------------------------
+@page explain The assignment operator
+@text
+The copy constructor handles creating a new object as a copy. Assigning to an object that already exists, as in b = a; on two existing lists, calls a different function: operator=. It has the same shallow copy problem, plus one more: b already owns nodes, which must be freed first or they leak.
+@end
+@code cpp
+class Node {
+public:
+    int data;
+    Node* next;
+    Node(int v) : data(v), next(nullptr) {}
+};
+
+class LinkedList {
+    Node* head = nullptr;
+public:
+    ~LinkedList() { clear(); }
+    void clear() {
+        while (head) { Node* t = head; head = head->next; delete t; }
+    }
+    LinkedList& operator=(const LinkedList& other) {
+        if (this != &other) {
+            clear();
+            Node* current = other.head;
+            while (current != nullptr) {
+                insertAtEnd(current->data);
+                current = current->next;
+            }
+        }
+        return *this;
+    }
+    void insertAtEnd(int v) {
+        Node* n = new Node(v);
+        if (!head) { head = n; return; }
+        Node* cur = head;
+        while (cur->next) cur = cur->next;
+        cur->next = n;
+    }
+    void display() const {
+        for (Node* c = head; c; c = c->next)
+            cout << (c == head ? "" : " ") << c->data;
+        cout << endl;
+    }
+};
+
+int main() {
+    LinkedList a, b;
+    a.insertAtEnd(1);
+    a.insertAtEnd(2);
+    b.insertAtEnd(9);
+    b = a;
+    a = a;
+    b.display();
+    a.display();
+    return 0;
+}
+@output
+1 2
+1 2
+@end
+@text
+The function follows the lecture's pattern in three steps. First, if (this != &other) checks for self-assignment: without it, a = a; would clear a and then copy from the now-empty list, losing everything. Second, clear() frees the nodes the list already had. Third, it copies each value from other. It returns *this by reference so that a = b = c; works.
+@end
+@text
+A rule of thumb, often called the rule of three: if a class needs a destructor because it owns memory, it almost certainly needs a copy constructor and an assignment operator too.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Shallow copy shares memory
+@code cpp
+struct H { int* value; };
+H a;
+a.value = new int(5);
+H b = a;
+*b.value = 99;
+@end
+@step 2
+@cell a.value int* ? 1000
+@note a is created. Its pointer member has no value yet.
+@step 3
+@cell a.value int* ->heap 1000
+@cell heap int 5 5000
+@note a.value points at an int on the heap holding 5.
+@step 4
+@cell a.value int* ->heap 1000
+@cell b.value int* ->heap 1008
+@cell heap int 5 5000
+@note The default copy copies the address 5000 into b.value. Both pointers now point at the same int. Nothing new was allocated.
+@step 5
+@cell a.value int* ->heap 1000
+@cell b.value int* ->heap 1008
+@cell heap int 99 5000
+@note Writing through b changed the one shared int, so *a.value is also 99. A copy constructor that allocates a new int would have prevented this.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct P { int* v; P(int x) : v(new int(x)) {}
+    P(const P& o) : v(new int(*o.v)) {} };
+struct Q { int* v; Q(int x) : v(new int(x)) {} };
+P p1(1); P p2 = p1;
+Q q1(1); Q q2 = q1;
+*p2.v = 7;
+*q2.v = 7;
+cout << *p1.v << " " << *q1.v << endl;
+@output
+1 7
+@end
+@option 1 1
+@option 7 7
+@option 1 7
+@option 7 1
+@answer 3
+@why P has a copy constructor that makes a deep copy, so p1 keeps 1. Q uses the default shallow copy, so q1 and q2 share one int and q1 sees the 7.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does the default copy do with a pointer data member?
+@opt Copies the address, so both objects share the memory
+@opt Allocates new memory and copies the value
+@opt Sets it to nullptr
+@opt It is a compile error
+@correct 1
+@why That is a shallow copy. The pointed-to data is not duplicated.
+
+@q Which line calls the copy constructor?
+@opt LinkedList b;
+@opt LinkedList b = a;  (b is being created)
+@opt b = a;  (b already exists)
+@opt a.clear();
+@correct 2
+@why Creating a new object from an existing one uses the copy constructor. Assigning to an existing object uses operator=.
+
+@q Why does operator= check if (this != &other)?
+@opt To make it faster
+@opt Without it, a = a would clear the list and then copy from the now-empty list
+@opt It is needed to return *this
+@opt To call the destructor
+@correct 2
+@why Self-assignment would destroy the data before it could be copied.
+
+@q Why does LinkedList::operator= call clear() before copying?
+@opt To free the nodes the list already owns, so they do not leak
+@opt To empty the other list
+@opt clear() copies the nodes
+@opt It is not needed
+@correct 1
+@why The target list's old nodes would otherwise be unreachable.
+
+@q What does the rule of three say?
+@opt A class should have three constructors
+@opt If a class needs a destructor, it usually also needs a copy constructor and an assignment operator
+@opt Every class needs three data members
+@opt Operators can only be overloaded three times
+@correct 2
+@why A class that owns memory must control how it is copied, or copies will share and double-free it.

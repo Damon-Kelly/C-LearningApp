@@ -7,12 +7,36 @@
 # A section with no @topic lines shows as "Coming soon".
 
 @section Basics | Types, operators, casting and input/output
+@topic basics_types.txt | Variables and types | int, double, char and bool, and how big each one is
+@topic basics_operators.txt | Operators | Arithmetic, integer division, shortcuts, comparisons and logic
+@topic basics_casting.txt | Type conversion and casting | Mixing int and double, truncation, and explicit casts
+@topic basics_io_c.txt | Input and output in C | printf format specifiers and reading input with scanf
+@topic basics_io_cpp.txt | Input and output in C++ | cout and cin, and how they differ from printf and scanf
+@exam exam_basics.txt
 
 @section Control flow | if/else, switch, loops and patterns
+@topic control_if.txt | Making decisions with if | if, else if, else, truthiness and the ternary operator
+@topic control_switch.txt | switch | Choosing between many fixed values, break and fall-through
+@topic control_loops.txt | Loops | while, do-while and for, plus break and continue
+@topic control_nested.txt | Nested loops | Loops inside loops: patterns, tables and how break behaves
+@topic control_patterns.txt | Common loop patterns | Accumulating, counting, digits, primes and input checking
+@exam exam_control.txt
 
 @section Arrays and strings | Arrays, 2D arrays and strings
+@topic arrays_basics.txt | Arrays: the basics | Declaring, indexing and looping over arrays
+@topic arrays_patterns.txt | Common array patterns | Finding the maximum, searching and reversing
+@topic arrays_2d.txt | Two-dimensional arrays | Rows, columns and nested loops
+@topic strings_basics.txt | Strings as char arrays | The terminating '\0' and working with characters
+@topic strings_library.txt | String functions | strlen, strcpy, strcat and strcmp
+@exam exam_arrays.txt
 
 @section Functions | Functions, pass by value and by reference
+@topic functions_basics.txt | Functions: the basics | Defining and calling functions, return values and prototypes
+@topic functions_scope.txt | Scope and lifetime | Local and global variables, shadowing and static
+@topic functions_recursion.txt | Recursion | Functions that call themselves, base cases and the call stack
+@topic functions_passing.txt | Pass by value and by reference | Value, pointer and C++ reference parameters, and const
+@topic functions_cpp.txt | C++ extras: overloading and defaults | Same-name functions and default argument values
+@exam exam_functions.txt
 
 @section Pointers and memory | Addresses, pointer arithmetic, dynamic memory
 @topic pointers_basics.txt | Pointers: & and * | What a pointer stores and how to follow it
@@ -22,4 +46,20 @@
 @topic pointers_dynamic.txt | Dynamic memory | malloc, free, new and delete
 @exam exam_pointers.txt
 
-@section Linked lists and classes | Node-based lists, class lists and destructors
+@section Linked lists | Nodes, insert, delete and freeing a list in C++
+@topic list_structs.txt | Structs and -> | Grouping data in a struct, and reaching it through a pointer
+@topic list_build.txt | Building and walking a list | The head pointer, new nodes, traversal and inserting at the front
+@topic list_insert_end.txt | Insert at the end | Why a function needs Node**, and walking to the last node
+@topic list_delete.txt | Search and delete | Finding a value, unlinking a node with a prev pointer, and delete
+@topic list_free.txt | Freeing a list | Memory leaks, deleting every node, and the use-after-delete trap
+@exam exam_lists.txt
+
+@section Classes and operators | Classes, constructors, operator overloading and list classes
+@topic class_basics.txt | Classes and objects | Data members, member functions, public and private, setters and getters
+@topic class_ctor.txt | Constructors and destructors | Setting up an object when it is created, and cleaning up when it dies
+@topic class_this.txt | this and const | The this pointer, returning *this, const methods and const references
+@topic class_operators.txt | Operator overloading | Giving +, ++ and << a meaning for your own classes
+@topic class_list.txt | A LinkedList class | Wrapping the list in a class, with a constructor, destructor and member functions
+@topic class_copy.txt | Copy constructor and assignment | Shallow and deep copies, and copying a LinkedList safely
+@topic class_doubly.txt | Doubly linked lists | Nodes with prevPointer and nextPointer, inserting at the start, end and a position
+@exam exam_classes.txt

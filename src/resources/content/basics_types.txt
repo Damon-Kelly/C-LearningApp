@@ -1,0 +1,161 @@
+# Basics: variables and types.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Variables and types
+@summary int, double, char and bool, and how big each one is
+
+#---------------------------------------------------------------------------
+@page explain Variables and types
+@text
+A variable is a named place in memory that holds one value. Its type decides what kind of value it can hold and how much memory it takes. You declare it by writing the type and then the name, and you can give it a starting value in the same line.
+@end
+@code c
+int age = 20;
+double price = 4.5;
+char grade = 'A';
+printf("%d %.1f %c\n", age, price, grade);
+@output
+20 4.5 A
+@end
+@text
+The four types you will use most: int for whole numbers, double for numbers with a decimal part, char for a single character in single quotes, and bool for true or false (in C you need #include <stdbool.h> for bool).
+@end
+@text
+A variable that is declared without a value, such as int n;, holds whatever happened to be in that memory before. Reading it gives a garbage value, so always initialise your variables.
+@end
+
+#---------------------------------------------------------------------------
+@page explain How big is each type?
+@text
+sizeof tells you how many bytes a type or variable takes. The sizes below are what you get on a typical 64-bit computer; only char is guaranteed to be exactly 1 byte.
+@end
+@code c
+printf("%zu %zu ", sizeof(char), sizeof(int));
+printf("%zu %zu\n", sizeof(double), sizeof(long long));
+@output
+1 4 8 8
+@end
+@text
+More bytes means a larger range. A 4-byte int holds roughly -2 billion to +2 billion. If a calculation goes past the range of its type, the result is wrong (for signed integers C does not even define what happens), so choose a larger type such as long long when numbers can get big.
+@end
+@code c
+bool done = false;
+bool ready = true;
+printf("%d %d\n", done, ready);
+@output
+0 1
+@end
+@text
+A bool is stored as 0 for false and 1 for true. C++ has bool built in and needs no header.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Characters are numbers
+@text
+A char is really a small integer. Each character has a number code (ASCII), for example 'A' is 65 and 'a' is 97. printf shows the same value as a character with %c and as a number with %d.
+@end
+@code c
+char c = 'A';
+printf("%c %d\n", c, c);
+c = c + 1;
+printf("%c %d\n", c, c);
+@output
+A 65
+B 66
+@end
+@text
+Because letters are in order, arithmetic works on them: 'A' + 1 is 'B', and c - 'a' gives the position of a lowercase letter in the alphabet. Digit characters are numbers too, but '7' is code 55, not 7.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Variables in memory
+@code c
+int n = 7;
+double d = 2.5;
+char c = 'A';
+n = n + 1;
+c = c + 2;
+@end
+@step 1
+@cell n int 7 1000
+@note n takes 4 bytes. It is created and holds 7.
+@step 2
+@cell n int 7 1000
+@cell d double 2.5 1008
+@note d takes 8 bytes, so it starts 8 bytes further on.
+@step 3
+@cell n int 7 1000
+@cell d double 2.5 1008
+@cell c char 'A' 1016
+@note c takes 1 byte. The letter 'A' is stored as the number 65.
+@step 4
+@cell n int 8 1000
+@cell d double 2.5 1008
+@cell c char 'A' 1016
+@note n = n + 1 overwrites n with 8. It stays at the same address.
+@step 5
+@cell n int 8 1000
+@cell d double 2.5 1008
+@cell c char 'C' 1016
+@note 'A' is 65, so c + 2 is 67, which is the code for 'C'.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+char c = 'a';
+int n = c - 'a' + 1;
+printf("%d %c\n", n, c + 1);
+@output
+1 b
+@end
+@option 1 98
+@option 0 b
+@option 1 b
+@option 98 b
+@answer 3
+@why c - 'a' is 0, so n is 1. c + 1 is the code 98, and %c prints the character with that code, which is 'b'.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q Which type is the best fit for the value 3.75?
+@opt int
+@opt double
+@opt char
+@opt bool
+@correct 2
+@why int cannot hold a decimal part. double is the usual type for numbers with decimals.
+
+@q What does an uninitialised local variable such as int n; contain?
+@opt 0
+@opt An unpredictable leftover value
+@opt The largest int
+@opt Nothing, reading it is a compile error
+@correct 2
+@why The variable gets whatever was in that memory before. Always give variables a starting value.
+
+@q How many bytes is a char?
+@opt 1
+@opt 2
+@opt 4
+@opt 8
+@correct 1
+@why A char is always exactly one byte.
+
+@q What number is stored in a char variable that holds 'A'?
+@opt 1
+@opt 65
+@opt 97
+@opt 0
+@correct 2
+@why Characters are stored as codes. The code for 'A' is 65.
+
+@q Which header do you need for bool in C?
+@opt stdio.h
+@opt stdlib.h
+@opt stdbool.h
+@opt bool.h
+@correct 3
+@why C99 provides bool, true and false through stdbool.h. C++ has them built in.

@@ -1,0 +1,211 @@
+# Classes: operator overloading (+, ++ prefix and postfix, <<).
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Operator overloading
+@summary Giving +, ++ and << a meaning for your own classes
+
+#---------------------------------------------------------------------------
+@page explain Overloading +
+@text
+Operator overloading lets you use ordinary operators with your own classes. An overloaded operator is just a function with a special name: operator followed by the symbol. When the compiler sees a + b with two Box objects, it calls a.operator+(b).
+@end
+@code cpp
+class Box {
+    double length, width;
+public:
+    Box(double l = 0, double w = 0) : length(l), width(w) {}
+    Box operator+(const Box& other) const {
+        Box result;
+        result.length = length + other.length;
+        result.width = width + other.width;
+        return result;
+    }
+    double area() const { return length * width; }
+};
+
+int main() {
+    Box a(1, 2), b(3, 4);
+    Box c = a + b;
+    cout << c.area() << endl;
+    return 0;
+}
+@output
+24
+@end
+@text
+Inside operator+, length means the left operand (a) and other is the right operand (b). The result is a new Box with 4 by 6, area 24. Neither a nor b changes, which is why the function is const and takes other by const reference.
+@end
+@text
+Overload an operator only when the meaning is obvious. Adding two boxes by adding their sides is a choice the class designer makes; someone reading a + b should be able to guess what happens.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Prefix and postfix ++
+@text
+++ comes in two forms, and C++ tells them apart by a dummy int parameter. operator++() is the prefix form (++c): change the object, then return it. operator++(int) is the postfix form (c++): save a copy, change the object, and return the saved copy.
+@end
+@code cpp
+class Clock {
+    int hour, min;
+    void tick() {
+        min = (min + 1) % 60;
+        if (min == 0) hour = (hour + 1) % 24;
+    }
+public:
+    Clock(int h = 12, int m = 0) : hour(h), min(m) {}
+    Clock operator++() { tick(); return *this; }
+    Clock operator++(int) {
+        Clock saved = *this;
+        tick();
+        return saved;
+    }
+    void show() const { cout << hour << ":" << min << endl; }
+};
+
+int main() {
+    Clock c(10, 59);
+    Clock a = c++;
+    Clock b = ++c;
+    a.show(); b.show(); c.show();
+    return 0;
+}
+@output
+10:59
+11:1
+11:1
+@end
+@text
+a = c++ stores the value from before the tick, 10:59, and c becomes 11:00. b = ++c ticks first, so both b and c show 11:01. That matches what ++ does for ints: the postfix form gives the old value.
+@end
+@text
+The int in operator++(int) is never used. It exists only so the two functions have different parameter lists.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Printing with <<
+@text
+To write cout << c for your own class, overload operator<< as a function outside the class. Its left operand is the stream (ostream&), its right operand is your object, and it returns the stream so that calls can be chained: cout << a << " " << b.
+@end
+@code cpp
+class Clock {
+    int hour, min;
+public:
+    Clock(int h = 12, int m = 0) : hour(h), min(m) {}
+    friend ostream& operator<<(ostream& os, const Clock& c);
+};
+
+ostream& operator<<(ostream& os, const Clock& c) {
+    if (c.hour < 10) os << '0';
+    os << c.hour << ":";
+    if (c.min < 10) os << '0';
+    os << c.min;
+    return os;
+}
+
+int main() {
+    Clock a, b(3, 5);
+    cout << a << " " << b << endl;
+    return 0;
+}
+@output
+12:00 03:05
+@end
+@text
+operator<< cannot be a member function, because the left operand is cout, not a Clock. It still needs the private hour and min, so the class declares it a friend: a non-member function that is allowed to see private members.
+@end
+@text
+Returning os is what makes chaining work. cout << a returns cout, so the next << " " is applied to cout again.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Postfix ++ keeps a copy
+@code cpp
+class C { public:
+    int v = 5;
+    C operator++(int) {
+        C saved = *this;
+        v++; return saved; } };
+C c;
+C a = c++;
+@end
+@step 6
+@cell c.v int 5 1000
+@note c is created with v = 5.
+@step 4
+@cell c.v int 5 1000
+@cell saved.v int 5 2000
+@note c++ calls operator++(int). The first thing it does is save a copy of the object.
+@step 5
+@cell c.v int 6 1000
+@cell saved.v int 5 2000
+@note The real object is incremented. The saved copy still holds the old value.
+@step 7
+@cell c.v int 6 1000
+@cell a.v int 5 1004
+@note The copy is returned and stored in a. So a has the old value 5 and c has 6, exactly like i++ for an int.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct N { int v; N(int x) : v(x) {}
+    N operator+(N o) { return N(v + o.v); }
+    N operator++(int) {
+        N s = *this; v++; return s; } };
+N a(2), b(5);
+N c = a + b;
+N d = c++;
+cout << c.v << " " << d.v << endl;
+@output
+8 7
+@end
+@option 7 8
+@option 8 8
+@option 8 7
+@option 7 7
+@answer 3
+@why a + b makes 7. d = c++ gives d the old value 7, and c becomes 8.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q When a and b are Box objects, what does a + b call?
+@opt b.operator+(a)
+@opt a.operator+(b)
+@opt Box.add(a, b)
+@opt Nothing, it is an error
+@correct 2
+@why For a member operator the left operand is the object and the right operand is the parameter.
+
+@q How does C++ tell the postfix operator++ apart from the prefix one?
+@opt Postfix has a dummy int parameter
+@opt Postfix returns void
+@opt Postfix must be a friend
+@opt Prefix has an int parameter
+@correct 1
+@why operator++(int) is the postfix form. The int is never used.
+
+@q What should the postfix ++ return?
+@opt The object after incrementing
+@opt A copy of the object as it was before incrementing
+@opt Nothing
+@opt The number 1
+@correct 2
+@why That matches i++ for built-in types, which gives the old value.
+
+@q Why is operator<< for a class usually a non-member friend function?
+@opt Its left operand is the stream, not an object of the class, and it needs the private data
+@opt Members cannot return references
+@opt friend functions are faster
+@opt It must be declared in main
+@correct 1
+@why A member operator's left operand would have to be the class. friend gives it access to private members.
+
+@q Why does operator<< return the ostream?
+@opt To close the stream
+@opt So that calls like cout << a << b can be chained
+@opt To print a new line
+@opt It is not allowed to return void
+@correct 2
+@why Each << returns the stream, so the next << continues on it.

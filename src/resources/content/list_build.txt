@@ -1,0 +1,218 @@
+# Linked lists: building a list, the head pointer, walking, inserting at the front.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Building and walking a list
+@summary The head pointer, new nodes, traversal and inserting at the front
+
+#---------------------------------------------------------------------------
+@page explain What a linked list is
+@text
+A linked list stores a sequence as separate nodes. Each node holds one value and a pointer to the next node. A single pointer, usually called headPtr, holds the address of the first node, and the last node's nextPtr is nullptr.
+@end
+@text
+Unlike an array, the nodes are not side by side in memory. The list can grow and shrink one node at a time without moving anything, but you cannot jump to element number 5 directly: to reach it you must follow the pointers from the head.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+int main() {
+    Node* headPtr = new Node();
+    headPtr->data = 10;
+    headPtr->nextPtr = new Node();
+    headPtr->nextPtr->data = 20;
+    headPtr->nextPtr->nextPtr = nullptr;
+    cout << headPtr->data << " " << headPtr->nextPtr->data << endl;
+    delete headPtr->nextPtr;
+    delete headPtr;
+    return 0;
+}
+@output
+10 20
+@end
+@text
+new Node() creates a node on the heap. It stays alive until you delete it, which is why lists can outlive the function that built them. Building a list by hand like this is tiring, so we will soon write functions for it.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Walking the list
+@text
+To visit every node, use a second pointer, curNodePtr, that starts at the head and moves along. The loop stops when it becomes nullptr, which means it has stepped past the last node.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+void PrintList(Node* headPtr) {
+    Node* curNodePtr = headPtr;
+    while (curNodePtr != nullptr) {
+        cout << curNodePtr->data << " ";
+        curNodePtr = curNodePtr->nextPtr;
+    }
+    cout << endl;
+}
+
+int main() {
+    Node c = {30, nullptr};
+    Node b = {20, &c};
+    Node a = {10, &b};
+    PrintList(&a);
+    return 0;
+}
+@output
+10 20 30
+@end
+@text
+Never move headPtr itself while walking. PrintList receives a copy of the head pointer, so this is safe here, but in other code moving the real head would lose the start of the list. Using a separate curNodePtr is the habit to learn.
+@end
+@text
+An empty list works with no special code: headPtr is nullptr, the loop condition is false straight away, and nothing is printed.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Inserting at the front
+@text
+Adding a node at the front takes two steps, and the order matters. First point the new node at the current first node. Then move the head to the new node.
+@end
+@code cpp
+struct Node {
+    int data;
+    Node* nextPtr;
+};
+
+int main() {
+    Node* headPtr = nullptr;
+    for (int v = 1; v <= 3; v++) {
+        Node* newNode = new Node();
+        newNode->data = v;
+        newNode->nextPtr = headPtr;
+        headPtr = newNode;
+    }
+    for (Node* cur = headPtr; cur != nullptr; cur = cur->nextPtr) {
+        cout << cur->data << endl;
+    }
+    return 0;
+}
+@output
+3
+2
+1
+@end
+@text
+Each new value goes in front of the older ones, so the list comes out reversed: 3, 2, 1. If you did headPtr = newNode first, the old nodes would have no pointer to them any more, and the rest of the list would be lost.
+@end
+@text
+Inserting at the front never needs a loop, so it takes the same short time however long the list is. It also works on an empty list: newNode->nextPtr becomes nullptr and the head points at the only node.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Inserting at the front, twice
+@code cpp
+struct Node { int data;
+              Node* nextPtr; };
+Node* headPtr = nullptr;
+Node* newNode = new Node{1, headPtr};
+headPtr = newNode;
+newNode = new Node{2, headPtr};
+headPtr = newNode;
+@end
+@step 3
+@cell headPtr Node* NULL 1000
+@note The list starts empty: the head points at nothing.
+@step 4
+@cell headPtr Node* NULL 1000
+@cell newNode Node* ->n1.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* NULL 5008
+@note A node holding 1 is created on the heap. Its nextPtr copies the head, which is nullptr.
+@step 5
+@cell headPtr Node* ->n1.data 1000
+@cell newNode Node* ->n1.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* NULL 5008
+@note The head now points at the new node. The list is: 1.
+@step 6
+@cell headPtr Node* ->n1.data 1000
+@cell newNode Node* ->n2.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* NULL 5008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* ->n1.data 5024
+@note A second node holding 2 is created. Its nextPtr copies the head, so it already points at the old first node.
+@step 7
+@cell headPtr Node* ->n2.data 1000
+@cell newNode Node* ->n2.data 1008
+@cell n1.data int 1 5000
+@cell n1.nextPtr Node* NULL 5008
+@cell n2.data int 2 5016
+@cell n2.nextPtr Node* ->n1.data 5024
+@note The head moves to the new node. The list is now 2, then 1. Nothing was copied or shifted.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code cpp
+struct Node { int data; Node* nextPtr; };
+Node c = {3, nullptr};
+Node b = {2, &c};
+Node a = {1, &b};
+Node* p = &a;
+p = p->nextPtr;
+cout << p->data << " " << p->nextPtr->data;
+@output
+2 3
+@end
+@option 1 2
+@option 2 2
+@option 1 3
+@option 2 3
+@answer 4
+@why p starts at a and p = p->nextPtr moves it to b. Then p->data is 2 and p->nextPtr is c, whose data is 3.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does headPtr hold?
+@opt The value of the first element
+@opt The address of the first node
+@opt The number of nodes
+@opt The address of the last node
+@correct 2
+@why The head pointer is the only way into the list. It holds the address of the first node.
+
+@q How does a program know it has reached the end of a list?
+@opt A counter reaches the list length
+@opt A node's nextPtr is nullptr
+@opt The data is 0
+@opt headPtr is nullptr
+@correct 2
+@why The last node's nextPtr is nullptr. Walking stops when the current pointer itself becomes nullptr.
+
+@q Why walk the list with a separate curNodePtr rather than moving headPtr?
+@opt It is faster
+@opt Moving the real head could lose the start of the list
+@opt headPtr must be const
+@opt Pointers cannot be changed
+@correct 2
+@why The head is the list's only entry point. Keep it still and move a copy.
+
+@q When inserting at the front, which step must come first?
+@opt headPtr = newNode;
+@opt newNode->nextPtr = headPtr;
+@opt delete headPtr;
+@opt Either order works
+@correct 2
+@why Pointing the new node at the old head must happen before the head moves, or the old nodes are lost.
+
+@q What is one advantage of a linked list over an array?
+@opt Elements can be reached by index in constant time
+@opt It can grow by one node without moving other elements
+@opt It uses less memory per element
+@opt It is always faster to search
+@correct 2
+@why Nodes can be added anywhere without shifting. The price is that you must walk to reach an element.

@@ -1,0 +1,181 @@
+# Control flow: nested loops.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Nested loops
+@summary Loops inside loops: patterns, tables and how break behaves
+
+#---------------------------------------------------------------------------
+@page explain A loop inside a loop
+@text
+Put one loop inside another and the inner loop runs completely for every single pass of the outer one. Printing patterns is the classic use: the outer loop counts rows and the inner loop prints the cells of a row.
+@end
+@code c
+for (int row = 1; row <= 3; row++) {
+    for (int col = 1; col <= row; col++) {
+        printf("*");
+    }
+    printf("\n");
+}
+@output
+*
+**
+***
+@end
+@text
+Row 1 prints one star, row 2 prints two, row 3 prints three, because the inner loop runs up to the current row number. The printf("\n") sits in the outer loop, after the inner one, so each row ends once.
+@end
+@text
+When both loops have fixed limits, the body runs outer times inner times. Two loops of 100 give 10,000 passes, so nested loops get slow quickly on big inputs.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Tables and separators
+@text
+A multiplication table needs both loop counters in the body. Printing a separator between the values, but not after the last one, is a pattern worth learning.
+@end
+@code c
+for (int i = 1; i <= 3; i++) {
+    for (int j = 1; j <= 3; j++) {
+        printf("%d", i * j);
+        if (j < 3) { printf(","); }
+    }
+    printf("\n");
+}
+@output
+1,2,3
+2,4,6
+3,6,9
+@end
+@text
+Use different names for the two counters (i and j, or row and col). Reusing the same name would make the inner loop disturb the outer one.
+@end
+
+#---------------------------------------------------------------------------
+@page explain break only leaves one loop
+@text
+A break ends only the loop it is directly inside. In nested loops that is the inner one, and the outer loop carries on.
+@end
+@code c
+for (int i = 1; i <= 3; i++) {
+    for (int j = 1; j <= 3; j++) {
+        if (j == 2) { break; }
+        printf("%d%d\n", i, j);
+    }
+}
+@output
+11
+21
+31
+@end
+@text
+For every i the inner loop stops when j reaches 2. To leave both loops at once, use a flag variable that the outer condition also checks, or put the loops in a function and return.
+@end
+
+#---------------------------------------------------------------------------
+@page trace Counting the passes
+@code c
+int count = 0;
+for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 3; j++) {
+        count++;
+    }
+}
+@end
+@step 1
+@cell count int 0 1000
+@note count starts at 0.
+@step 4
+@cell count int 1 1000
+@cell i int 0 1004
+@cell j int 0 1008
+@note First pass: i is 0 and the inner loop starts with j = 0.
+@step 4
+@cell count int 2 1000
+@cell i int 0 1004
+@cell j int 1 1008
+@note The inner loop continues while i stays at 0.
+@step 4
+@cell count int 3 1000
+@cell i int 0 1004
+@cell j int 2 1008
+@note j reaches 2, the last value. The next j++ makes it 3 and ends the inner loop.
+@step 4
+@cell count int 4 1000
+@cell i int 1 1004
+@cell j int 0 1008
+@note The outer loop moves on to i = 1 and the inner loop starts over: j is back at 0.
+@step 4
+@cell count int 5 1000
+@cell i int 1 1004
+@cell j int 1 1008
+@note Second row, second cell.
+@step 4
+@cell count int 6 1000
+@cell i int 1 1004
+@cell j int 2 1008
+@note Both loops are about to finish. 2 rows of 3 cells gave 6 passes.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int c = 0;
+for (int i = 1; i <= 3; i++) {
+    for (int j = i; j <= 3; j++) {
+        c++;
+    }
+}
+printf("%d\n", c);
+@output
+6
+@end
+@option 9
+@option 6
+@option 3
+@option 4
+@answer 2
+@why The inner loop starts at i. For i = 1 it runs 3 times, for i = 2 it runs 2 times, for i = 3 it runs once: 3 + 2 + 1 = 6.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q How many times does the body run in for (i = 0; i < 4; i++) with an inner for (j = 0; j < 5; j++)?
+@opt 9
+@opt 20
+@opt 4
+@opt 5
+@correct 2
+@why The inner loop runs 5 times for each of the 4 outer passes.
+
+@q In a row pattern, where does the printf("\n") that ends a row belong?
+@opt Inside the inner loop
+@opt In the outer loop, after the inner loop
+@opt Before both loops
+@opt After both loops
+@correct 2
+@why The new line must be printed once per row, after the inner loop has finished.
+
+@q Which loop does a break inside the inner loop leave?
+@opt Both loops
+@opt Only the inner loop
+@opt Only the outer loop
+@opt The whole program
+@correct 2
+@why break always leaves the innermost loop that contains it.
+
+@q What happens to the inner counter when the outer loop starts its next pass?
+@opt It keeps its old value
+@opt It starts again from its initial value
+@opt It becomes 0 always
+@opt It is not allowed to be used
+@correct 2
+@why The for header of the inner loop runs again, setting its counter back to the start.
+
+@q Why should two nested loops use different counter names?
+@opt It is a syntax rule of for
+@opt Sharing a name would let the inner loop change the outer counter
+@opt To save memory
+@opt Counters must be single letters
+@correct 2
+@why Using the same variable would mix up the two counts.

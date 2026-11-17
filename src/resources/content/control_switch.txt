@@ -1,0 +1,153 @@
+# Control flow: switch.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic switch
+@summary Choosing between many fixed values, break and fall-through
+
+#---------------------------------------------------------------------------
+@page explain The switch statement
+@text
+When one value decides between many fixed options, switch is tidier than a long else if chain. The program jumps to the case that matches. A break leaves the switch, and default runs when nothing matches.
+@end
+@code c
+int day = 3;
+switch (day) {
+    case 1: printf("Mon\n"); break;
+    case 2: printf("Tue\n"); break;
+    case 3: printf("Wed\n"); break;
+    default: printf("other\n");
+}
+@output
+Wed
+@end
+@text
+The value being switched on must be an integer type, which includes char. Each case needs a constant, such as 3 or 'a'. You cannot switch on a double or a string, and you cannot write ranges like case 1..5.
+@end
+
+#---------------------------------------------------------------------------
+@page explain Fall-through
+@text
+A case is only a place to jump to, not a block with a boundary. Once execution starts at the matching case, it keeps running through the following cases until it meets a break or the end of the switch. Forgetting break is a classic bug.
+@end
+@code c
+int n = 2;
+switch (n) {
+    case 1: printf("one\n");
+    case 2: printf("two\n");
+    case 3: printf("three\n");
+    default: printf("done\n");
+}
+@output
+two
+three
+done
+@end
+@text
+It jumped straight to case 2 and then fell down through everything below it. Used on purpose, fall-through lets several cases share one block.
+@end
+@code c
+char c = 'e';
+switch (c) {
+    case 'a': case 'e': case 'i': case 'o': case 'u':
+        printf("vowel\n");
+        break;
+    default:
+        printf("consonant\n");
+}
+@output
+vowel
+@end
+
+#---------------------------------------------------------------------------
+@page trace Jumping into a switch
+@code c
+int n = 2;
+int count = 0;
+switch (n) {
+    case 1: count += 1;
+    case 2: count += 10;
+    case 3: count += 100; break;
+    default: count += 1000;
+}
+@end
+@step 1
+@cell n int 2 1000
+@note n holds 2.
+@step 2
+@cell n int 2 1000
+@cell count int 0 1004
+@note count starts at 0.
+@step 5
+@cell n int 2 1000
+@cell count int 10 1004
+@note The switch jumps straight to case 2. The line for case 1 is skipped entirely.
+@step 6
+@cell n int 2 1000
+@cell count int 110 1004
+@note With no break after case 2, execution falls into case 3 and adds 100. Only now does break leave the switch, so default never runs.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this program print?
+@end
+@code c
+int n = 3, r = 0;
+switch (n) {
+    case 1: r += 1;
+    case 3: r += 3;
+    case 4: r += 4; break;
+    default: r += 9;
+}
+printf("%d\n", r);
+@output
+7
+@end
+@option 3
+@option 7
+@option 16
+@option 4
+@answer 2
+@why It jumps to case 3 and adds 3, falls into case 4 and adds 4, then break leaves the switch. That makes 7.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q What does break do inside a switch?
+@opt Ends the whole program
+@opt Leaves the switch
+@opt Skips to the next case
+@opt Restarts the switch
+@correct 2
+@why Without break, execution carries on into the next case.
+
+@q Which of these can you NOT use as the value of a switch in C?
+@opt int
+@opt char
+@opt double
+@opt an enum
+@correct 3
+@why A switch needs an integer type. Floating-point numbers and strings are not allowed.
+
+@q When does default run?
+@opt Always, first
+@opt When no case matches
+@opt Only after a break
+@opt Never unless it is the last label
+@correct 2
+@why default is the catch-all for values that match no case.
+
+@q What is printed by switch (2) { case 1: printf("A"); case 2: printf("B"); case 3: printf("C"); }?
+@opt B
+@opt BC
+@opt ABC
+@opt C
+@correct 2
+@why It starts at case 2 and falls through to case 3, because there is no break.
+
+@q Why would you write case 'a': case 'e': one after another?
+@opt To make both labels run different code
+@opt To let several values share the same code
+@opt It is a syntax error
+@opt To compare strings
+@correct 2
+@why The first label has no code and no break, so it falls into the next one.

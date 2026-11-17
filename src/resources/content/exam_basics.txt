@@ -1,0 +1,279 @@
+# Section exam for "Basics".
+#
+# Each attempt draws 7 of the multiple-choice questions and 3 of the typed ones, in random order.
+# Typed answers are compared ignoring capitals, spaces and a trailing semicolon.
+# Every @accept is compiled and run against its @test by:  python3 tools/verify_content.py
+# Choice questions that show code are run too: the correct option must equal the real output.
+
+@exam Basics exam
+@pass 70
+@draw 7 3
+
+#===========================================================================
+# Multiple choice
+#===========================================================================
+@q Which type is the best fit for storing the value 3.7?
+@opt int
+@opt double
+@opt char
+@opt bool
+@correct 2
+@why int would cut off the decimals. double holds numbers with a decimal part.
+
+@q What does this program print?
+@code c
+int a = 17, b = 5;
+printf("%d\n", a / b + a % b);
+@end
+@opt 3
+@opt 3.4
+@opt 5
+@opt 2
+@correct 3
+@why 17 / 5 is 3 (integer division) and 17 % 5 is 2, so the sum is 5.
+
+@q What does this program print?
+@code c
+int i = 4;
+int a = i++;
+int b = ++i;
+printf("%d %d %d\n", a, b, i);
+@end
+@opt 4 6 6
+@opt 5 6 6
+@opt 4 5 6
+@opt 4 6 5
+@correct 1
+@why a gets 4 and then i becomes 5. ++i makes i 6 first, so b is 6 and i is 6.
+
+@q What does this program print?
+@code c
+printf("%.1f\n", (double)(7 / 2));
+@end
+@opt 3.5
+@opt 3.0
+@opt 3
+@opt 4.0
+@correct 2
+@why The integer division 7 / 2 happens first and gives 3. The cast then turns 3 into 3.0.
+
+@q What does this program print?
+@code c
+char c = 'A';
+c += 2;
+printf("%c %d\n", c, c);
+@end
+@opt C 67
+@opt C 65
+@opt A 67
+@opt B 66
+@correct 1
+@why 'A' is 65, adding 2 gives 67, which is the code of 'C'.
+
+@q Which header gives you bool in C?
+@opt stdio.h
+@opt stdbool.h
+@opt bool.h
+@opt stdlib.h
+@correct 2
+@why stdbool.h defines bool, true and false in C99. C++ has them built in.
+
+@q Which call correctly reads an int into n?
+@opt scanf("%d", n);
+@opt scanf("%f", &n);
+@opt scanf("d", &n);
+@opt scanf("%d", &n);
+@correct 4
+@why %d matches an int and &n passes the address so scanf can change n.
+
+@q What does this C++ program print?
+@code cpp
+int a = 7;
+cout << a / 2 << " " << a / 2.0 << endl;
+@end
+@opt 3 3.5
+@opt 3.5 3.5
+@opt 3 3
+@opt 3.5 3
+@correct 1
+@why a / 2 is an integer division and gives 3. a / 2.0 involves a double and gives 3.5.
+
+@q What does this program print?
+@code c
+printf("%.3f|%d%%\n", 2.0, 50);
+@end
+@opt 2.0|50%
+@opt 2.000|50
+@opt 2|50%
+@opt 2.000|50%
+@correct 4
+@why %.3f shows three decimals and %% prints one percent sign.
+
+@q What does this program print?
+@code c
+printf("%d\n", (5 > 3) + (2 > 4) + (1 == 1));
+@end
+@opt 0
+@opt 1
+@opt 2
+@opt 3
+@correct 3
+@why The comparisons give 1, 0 and 1. In C, true is 1 and false is 0.
+
+@q Which statement reads a whole line, including spaces, into the string line in C++?
+@opt cin >> line;
+@opt getline(cin, line);
+@opt cin.read(line);
+@opt readline(cin);
+@correct 2
+@why cin >> stops at whitespace. getline reads to the end of the line.
+
+@q Why does (int)3.99 give 3?
+@opt Casting to int cuts off the decimal part
+@opt Casting rounds to the nearest integer
+@opt Casting always rounds up
+@opt It is a compile error
+@correct 1
+@why Converting a double to an int truncates toward zero.
+
+@q What does this program print?
+@code c
+printf("%d\n", 2 + 3 * 4 % 5);
+@end
+@opt 14
+@opt 4
+@opt 0
+@opt 20
+@correct 2
+@why * and % go left to right: 3 * 4 is 12, 12 % 5 is 2, and 2 + 2 is 4.
+
+#===========================================================================
+# Typed answers
+#===========================================================================
+@typed Declare an int variable named count with the starting value 0.
+@code c
+____
+@end
+@accept int count = 0;
+@test
+printf("%d\n", count);
+@expect
+0
+@end
+@why Write the type, the name and the starting value: int count = 0;
+
+@typed Fill in the format so the program prints 4.5 (one decimal place).
+@code c
+double price = 4.5;
+printf("%____\n", price);
+@end
+@accept .1f
+@accept .1lf
+@test
+@expect
+4.5
+@end
+@why %f is for doubles and .1 asks for one digit after the decimal point.
+
+@typed Fill in a cast so the program prints 3.5.
+@code c
+int a = 7, b = 2;
+double r = ____ a / b;
+printf("%.1f\n", r);
+@end
+@accept (double)
+@accept (float)
+@test
+@expect
+3.5
+@end
+@why The cast turns a into a decimal number before the division, so the division keeps its decimals.
+
+@typed Fill in the operator so the program prints the remainder of 17 divided by 5.
+@code c
+printf("%d\n", 17 ____ 5);
+@end
+@accept %
+@test
+@expect
+2
+@end
+@why The % operator gives the remainder of an integer division.
+
+@typed Fill in the argument so scanf stores the number in n.
+@code c
+int n = 7;
+scanf("%d", ____);
+printf("%d\n", n);
+@end
+@accept &n
+@test
+@expect
+7
+@end
+@why scanf needs the address of n so it can change it.
+
+@typed Fill in the operator that sends x to cout.
+@code cpp
+int x = 5;
+cout ____ x << endl;
+@end
+@accept <<
+@test
+@expect
+5
+@end
+@why cout is used with <<, which points toward the stream.
+
+@typed Fill in the C++ cast so the program prints 3.5.
+@code cpp
+int a = 7, b = 2;
+cout << ____<double>(a) / b << endl;
+@end
+@accept static_cast
+@test
+@expect
+3.5
+@end
+@why static_cast<double>(a) converts a to a double before the division.
+
+@typed Fill in the argument so the program prints the number code of c, which is 66.
+@code c
+char c = 'A';
+c = c + 1;
+printf("%d\n", ____);
+@end
+@accept c
+@accept (int)c
+@test
+@expect
+66
+@end
+@why %d prints the number stored in the char. 'B' is 66.
+
+@typed Write one statement that multiplies x by 3 using a compound assignment.
+@code c
+int x = 4;
+____
+printf("%d\n", x);
+@end
+@accept x *= 3;
+@accept x = x * 3;
+@accept x = 3 * x;
+@test
+@expect
+12
+@end
+@why x *= 3 is short for x = x * 3.
+
+@typed Fill in the logical operator so the line prints 1 when n is between 1 and 9.
+@code c
+int n = 5;
+printf("%d\n", n >= 1 ____ n <= 9);
+@end
+@accept &&
+@test
+@expect
+1
+@end
+@why Both conditions must be true, so they are joined with && (and).

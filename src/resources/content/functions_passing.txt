@@ -1,0 +1,197 @@
+# Functions: passing by value, by pointer and by C++ reference.
+# Code outputs are checked by running:  python3 tools/verify_content.py
+
+@topic Pass by value and by reference
+@summary Value, pointer and C++ reference parameters, and const
+
+#---------------------------------------------------------------------------
+@page explain Three ways to pass an argument
+@text
+In C there is one rule: arguments are copied. If the function should change the caller's variable, you pass its address, and the parameter becomes a pointer.
+@end
+@code c
+void swap(int *a, int *b) {
+    int t = *a;
+    *a = *b;
+    *b = t;
+}
+
+int main(void) {
+    int x = 1, y = 2;
+    swap(&x, &y);
+    printf("%d %d\n", x, y);
+    return 0;
+}
+@output
+2 1
+@end
+@text
+The caller must write &x and the function must write *a. Forget either one and the program compiles but misbehaves. C++ adds a third option that hides this work: references.
+@end
+
+#---------------------------------------------------------------------------
+@page explain C++ references
+@text
+A reference parameter, written with & in the declaration, is another name for the caller's variable. The caller passes the variable normally, and the function uses it normally. No & or * at the call site.
+@end
+@code cpp
+void swapRef(int &a, int &b) {
+    int t = a;
+    a = b;
+    b = t;
+}
+
+int main() {
+    int x = 1, y = 2;
+    swapRef(x, y);
+    cout << x << " " << y << endl;
+    return 0;
+}
+@output
+2 1
+@end
+@text
+Under the hood a reference is usually implemented like a pointer, but you cannot make it point somewhere else later and it can never be NULL. Do not confuse the & in a declaration (reference) with the & in an expression (address of).
+@end
+
+#---------------------------------------------------------------------------
+@page explain Avoiding copies with const
+@text
+Copying a large object such as a long string on every call is wasteful. A const reference passes the original without copying, and the compiler refuses any attempt to change it.
+@end
+@code cpp
+int countA(const string &s) {
+    int n = 0;
+    for (int i = 0; i < (int)s.size(); i++) {
+        if (s[i] == 'a') { n++; }
+    }
+    return n;
+}
+
+int main() {
+    string w = "banana";
+    cout << countA(w) << endl;
+    return 0;
+}
+@output
+3
+@end
+@text
+A good habit: small things like int and double are passed by value, things you want to change by reference (or pointer in C), and large things you only read by const reference (const pointer in C).
+@end
+
+#---------------------------------------------------------------------------
+@page trace A reference is another name
+@code cpp
+int x = 1;
+int y = 2;
+int &a = x;
+int &b = y;
+int t = a;
+a = b;
+b = t;
+@end
+@step 1
+@cell x int 1 1000
+@note x holds 1.
+@step 2
+@cell x int 1 1000
+@cell y int 2 1004
+@note y holds 2.
+@step 3
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int& 1 1000
+@note a is not a new variable. It is another name for x, so it sits at the same address 1000 and shows the same value.
+@step 4
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int& 1 1000
+@cell b int& 2 1004
+@note b is another name for y, at address 1004.
+@step 5
+@cell x int 1 1000
+@cell y int 2 1004
+@cell a int& 1 1000
+@cell b int& 2 1004
+@cell t int 1 1008
+@note t is a real new variable and receives a copy of the value 1.
+@step 6
+@cell x int 2 1000
+@cell y int 2 1004
+@cell a int& 2 1000
+@cell b int& 2 1004
+@cell t int 1 1008
+@note a = b assigns y's value to x, because a is x. There is no * anywhere, yet x changed.
+@step 7
+@cell x int 2 1000
+@cell y int 1 1004
+@cell a int& 2 1000
+@cell b int& 1 1004
+@cell t int 1 1008
+@note b = t changes y. The swap is done. A reference parameter in swapRef works in exactly this way.
+
+#---------------------------------------------------------------------------
+@page predict Predict the output
+@text
+What does this C++ program print?
+@end
+@code cpp
+void f(int a, int &b) { a += 10; b += 10; }
+
+int main() {
+    int x = 1, y = 2;
+    f(x, y);
+    cout << x << " " << y << endl;
+}
+@output
+1 12
+@end
+@option 1 2
+@option 11 12
+@option 1 12
+@option 11 2
+@answer 3
+@why a is a copy, so a += 10 does not affect x, which stays 1. b is a reference to y, so b += 10 changes y to 12.
+
+#---------------------------------------------------------------------------
+@page quiz Check your understanding
+@q In C, how do you let a function change the caller's int?
+@opt Pass the int by value
+@opt Pass its address and use a pointer parameter
+@opt Declare it const
+@opt Make the function void
+@correct 2
+@why The function can only reach the caller's variable if it is given the address.
+
+@q A C++ function is declared void inc(int &n). How do you call it for a variable x?
+@opt inc(&x);
+@opt inc(*x);
+@opt inc(x);
+@opt inc(&&x);
+@correct 3
+@why With a reference parameter the caller passes the variable as usual. The compiler arranges the rest.
+
+@q What does the & mean in the declaration int &a = x;?
+@opt Address of x
+@opt a is another name for x
+@opt Bitwise AND
+@opt a is a pointer to x
+@correct 2
+@why In a declaration, & after a type makes a reference. In an expression like &x it means address of.
+
+@q Why pass a long string as const string &s instead of string s?
+@opt It avoids copying, and the function cannot change the original
+@opt It makes the string shorter
+@opt It lets the function change the string
+@opt It is required for all strings
+@correct 1
+@why A const reference gives access to the original without copying it, and the compiler rejects modifications.
+
+@q Which parameter style would you choose for a small int the function only reads?
+@opt A pointer
+@opt A non-const reference
+@opt A plain value
+@opt A global variable
+@correct 3
+@why Copying a small value is cheap and safe.
