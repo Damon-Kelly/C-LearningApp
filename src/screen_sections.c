@@ -9,6 +9,7 @@ static const Rectangle backButton     = { 60, 480, 140, 40 };       // acts as "
 static const Rectangle progressButton = { 500, 480, 120, 40 };
 static const Rectangle profileButton  = { 640, 480, 120, 40 };
 static const Rectangle settingsButton = { 780, 480, 120, 40 };
+static const Rectangle visualizerButton = { 220, 480, 240, 40 };
 
 // Two columns of cards, room for 4 rows (8 sections) above the Back button.
 // Add a row of space here if you ever need more than 8 sections.
@@ -39,6 +40,7 @@ void UpdateSectionsScreen(void)
     }
 
     if (UiButtonClicked(progressButton)) finishScreen = PROGRESS;
+    if (UiButtonClicked(visualizerButton)) { OpenVisualizerHome(); finishScreen = VISUALIZER; }
     if (UiButtonClicked(profileButton)) finishScreen = PROFILE;
     if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
 
@@ -64,8 +66,9 @@ void DrawSectionsScreen(void)
         bool hover = available && CheckCollisionPointRec(GetMousePosition(), r);
 
         // Card: border first, then fill, so the border colour can react to hover
-        DrawRectangleRounded(r, 0.1f, 8, hover ? UI_ACCENT : (Color){ 200, 204, 216, 255 });
-        DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, available ? WHITE : (Color){ 236, 238, 244, 255 });
+        if (hover) DrawRectangleRounded((Rectangle){ r.x - 3, r.y - 3, r.width + 6, r.height + 6 }, 0.12f, 8, Fade(UI_ACCENT, 0.25f));
+        DrawRectangleRounded(r, 0.1f, 8, hover ? UI_ACCENT : UI_BORDER);
+        DrawRectangleRounded((Rectangle){ r.x + 1, r.y + 1, r.width - 2, r.height - 2 }, 0.1f, 8, available ? (hover ? UI_PANEL2 : UI_PANEL) : UI_BG);
 
         Color titleColor = available ? UI_TEXT : UI_MUTED;
         UiText(TextFormat("%d. %s", i + 1, section->name), (Vector2){ r.x + 16, r.y + 10 }, 24, titleColor);
@@ -80,6 +83,7 @@ void DrawSectionsScreen(void)
 
     UiButtonDrawEx(backButton, "Log out", UI_MUTED, true);
     UiButtonDraw(progressButton, "Progress");
+    UiButtonDrawEx(visualizerButton, "Open the Visualizer", UI_ACCENT2, true);
     UiButtonDraw(profileButton, "Profile");
     UiButtonDraw(settingsButton, "Settings");
 }

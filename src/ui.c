@@ -83,6 +83,11 @@ char uiScrollDebug[160] = "no scroll bar on this screen";
 
 void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep)
 {
+    UiScrollUpdateEx(sc, track, viewHeight, maxScroll, wheelStep, true);
+}
+
+void UiScrollUpdateEx(UiScroll *sc, Rectangle track, float viewHeight, float maxScroll, float wheelStep, bool arrowKeys)
+{
     scrollGrabbed = false;
     {
         Rectangle t = ScrollThumb(sc, track, viewHeight, maxScroll > 0 ? maxScroll : 1);
@@ -92,8 +97,8 @@ void UiScrollUpdate(UiScroll *sc, Rectangle track, float viewHeight, float maxSc
     if (maxScroll <= 0) { sc->offset = 0; sc->dragging = false; return; }
 
     sc->offset -= GetMouseWheelMove()*wheelStep;
-    if (IsKeyDown(KEY_DOWN)) sc->offset += 6.0f;
-    if (IsKeyDown(KEY_UP)) sc->offset -= 6.0f;
+    if (arrowKeys && IsKeyDown(KEY_DOWN)) sc->offset += 6.0f;
+    if (arrowKeys && IsKeyDown(KEY_UP)) sc->offset -= 6.0f;
 
     Vector2 mouse = GetMousePosition();
     Rectangle thumb = ScrollThumb(sc, track, viewHeight, maxScroll);
@@ -127,7 +132,7 @@ void UiScrollDraw(const UiScroll *sc, Rectangle track, float viewHeight, float m
     Rectangle hit = { track.x - SCROLL_HIT_PAD, track.y, track.width + 2*SCROLL_HIT_PAD, track.height };
     bool hot = sc->dragging || CheckCollisionPointRec(GetMousePosition(), hit);
 
-    DrawRectangleRounded(track, 1.0f, 4, (Color){ 225, 228, 238, 255 });
+    DrawRectangleRounded(track, 1.0f, 4, UI_PANEL2);
     DrawRectangleRounded(thumb, 1.0f, 4, hot ? UI_ACCENT : UI_MUTED);
 }
 
@@ -141,22 +146,103 @@ void UiButtonDrawEx(Rectangle bounds, const char *text, Color fill, bool enabled
     bool hover = enabled && CheckCollisionPointRec(GetMousePosition(), bounds);
     bool down = hover && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 
-    Color color = fill;
-    if (down) color = ColorBrightness(fill, -0.2f);
-    else if (hover) color = ColorBrightness(fill, 0.15f);
+    // UI_MUTED means "secondary": a dark button with an outline instead of a coloured one
+    bool secondary = UiSameColor(fill, UI_MUTED);
+    Color color = secondary ? UI_PANEL2 : fill;
+    Color textColor = secondary ? UI_TEXT : WHITE;
+    if (down) color = ColorBrightness(color, -0.2f);
+    else if (hover) color = ColorBrightness(color, secondary ? 0.12f : 0.15f);
+    if (!enabled) { color = Fade(color, 0.45f); textColor = Fade(textColor, 0.5f); }
 
+    // A soft glow under coloured buttons when hovered
+    if (hover && !secondary) DrawRectangleRounded((Rectangle){ bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6 }, 0.3f, 8, Fade(fill, 0.25f));
     DrawRectangleRounded(bounds, 0.25f, 8, color);
+    if (secondary) DrawRectangleRoundedLinesEx(bounds, 0.25f, 8, 1.0f, hover ? UI_MUTED : UI_BORDER);
 
     const float size = 20.0f;
     Vector2 textSize = UiMeasureText(text, size);
     Vector2 pos = { bounds.x + (bounds.width - textSize.x)/2.0f, bounds.y + (bounds.height - textSize.y)/2.0f };
-    UiText(text, pos, size, WHITE);
+    UiText(text, pos, size, textColor);
+}
+
+static const char *rainCode[] = {
+    "int *p = &x;", "*p = 42;", "struct Node {", "    int data;", "    struct Node *next;", "};",
+    "Node *n = malloc(sizeof(Node));", "n->next = head;", "head = n;", "for (int i = 0; i < n; i++)",
+    "    sum += a[i];", "free(ptr);", "ptr = NULL;", "char s[] = \"hello\";", "strcpy(dst, src);",
+    "int fact(int n) {", "    if (n <= 1) return 1;", "    return n * fact(n - 1);", "}", "printf(\"%d\\n\", x);",
+    "void swap(int *a, int *b) {", "    int t = *a;", "    *a = *b; *b = t;", "while (cur != NULL)",
+    "    cur = cur->next;", "int m[3][3] = {0};", "Box operator+(const Box &b);", "~LinkedList() { clear(); }",
+    "#include <stdio.h>", "return 0;", "if (head == NULL) return;", "delete[] arr;",
+};
+
+void UiDrawCodeRain(Rectangle area, float speed)
+{
+    const int count = (int)(sizeof(rainCode)/sizeof(rainCode[0]));
+    const float lh = 19.0f, size = 13.0f;
+    float t = (float)GetTime()*speed;
+    int first = (int)(t/lh);
+    float frac = fmodf(t, lh);
+    unsigned char cls[64];
+
+    for (int k = 0; k*lh < area.height + lh; k++)
+    {
+        int idx = (first + k + (int)area.x/37)%count;      // the x offset makes each area show different lines
+        const char *line = rainCode[idx];
+        float y = area.y + area.height - (k*lh + frac);
+        // Fade in at the bottom and out at the top
+        float pos = (y - area.y)/area.height;
+        float alpha = 0.35f*sinf(pos*PI);
+        if (alpha <= 0.01f) continue;
+
+        int n = (int)strlen(line);
+        if (n > 63) n = 63;
+        CodeClassify(line, n, cls);
+        float cw = MeasureTextEx(monoFont, "M", size, 0).x;
+        char run[64];
+        int i = 0;
+        while (i < n)
+        {
+            int j = i;
+            while (j < n && cls[j] == cls[i]) j++;
+            memcpy(run, line + i, (size_t)(j - i));
+            run[j - i] = '\0';
+            DrawTextEx(monoFont, run, (Vector2){ area.x + i*cw, y }, size, 0, Fade(CodeClassColor(cls[i]), alpha));
+            i = j;
+        }
+    }
+}
+
+bool UiSameColor(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+
+// A soft round glow: stacked see-through circles, brightest in the middle
+// (DrawCircleGradient changed its arguments between raylib versions, so it is not used)
+static void SoftGlow(float cx, float cy, float radius, Color c, float alpha)
+{
+    const int rings = 14;
+    for (int i = 0; i < rings; i++)
+    {
+        float r = radius*(1.0f - (float)i/rings);
+        DrawCircle((int)cx, (int)cy, r, Fade(c, alpha/rings*1.6f));
+    }
+}
+
+void UiDrawBackground(float width, float height)
+{
+    DrawRectangle(0, 0, (int)width, (int)height, UI_BG);
+    // Dot grid drifting slowly up and left, with a faint glow in one corner
+    float t = (float)GetTime();
+    float off = fmodf(t*6.0f, 32.0f);
+    for (float y = -off; y < height; y += 32.0f)
+        for (float x = -off*0.5f; x < width; x += 32.0f)
+            DrawRectangle((int)x, (int)y, 2, 2, (Color){ 30, 37, 46, 255 });
+    SoftGlow(width*0.85f, -40, height*0.7f, UI_ACCENT2, 0.10f);
+    SoftGlow(width*0.05f, height + 60, height*0.6f, UI_ACCENT, 0.08f);
 }
 
 void UiDrawHeader(const char *title)
 {
     UiText(title, (Vector2){ 60, 30 }, 36, UI_TEXT);
-    DrawRectangle(60, 78, 840, 3, UI_ACCENT);
+    DrawRectangleGradientH(60, 78, 840, 3, UI_ACCENT, UI_ACCENT2);
 }
 
 void UiDrawLoggedInAs(void)
@@ -365,8 +451,8 @@ static void BoxUpdate(Rectangle bounds, char *buf, int bufSize, bool masked, boo
 
 static void BoxDraw(Rectangle bounds, const char *buf, bool active, bool masked, bool mono)
 {
-    DrawRectangleRec(bounds, WHITE);
-    DrawRectangleLinesEx(bounds, active ? 2.0f : 1.0f, active ? UI_ACCENT : (Color){ 200, 204, 216, 255 });
+    DrawRectangleRounded(bounds, 0.15f, 6, UI_INPUT);
+    DrawRectangleRoundedLinesEx(bounds, 0.15f, 6, active ? 2.0f : 1.0f, active ? UI_ACCENT : UI_BORDER);
 
     char shown[BOX_TEXT_MAX];
     int n = BoxShown(buf, masked, shown);

@@ -25,12 +25,12 @@ static const Rectangle viewProgressButton = { 680, 384, 200, 44 };
 static const Rectangle detailsCard = { 60, 112, 840, 208 };
 static const Rectangle progressCard = { 60, 336, 840, 112 };
 
-#define CARD_BORDER  ((Color){ 200, 204, 216, 255 })
+#define CARD_BORDER  UI_BORDER
 
 static void DrawCard(Rectangle r)
 {
     DrawRectangleRounded(r, 0.06f, 8, CARD_BORDER);
-    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.06f, 8, WHITE);
+    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.06f, 8, UI_PANEL);
 }
 
 static const char *MemberSince(long long created)

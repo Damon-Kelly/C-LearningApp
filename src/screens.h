@@ -31,6 +31,7 @@ typedef enum GameScreen {
     PROFILE,
     SETTINGS,
     PROGRESS,
+    VISUALIZER,
     SCREEN_COUNT
 } GameScreen;
 
@@ -101,6 +102,18 @@ void UpdateProfileScreen(void);
 void DrawProfileScreen(void);
 void UnloadProfileScreen(void);
 GameScreen FinishProfileScreen(void);
+
+void InitVisualizerScreen(void);
+void UpdateVisualizerScreen(void);
+void DrawVisualizerScreen(void);
+void UnloadVisualizerScreen(void);
+GameScreen FinishVisualizerScreen(void);
+
+// Before switching to VISUALIZER: load this code (and input) into it, and go back to returnTo
+// when the user presses Back. code may be a snippet without main; it is wrapped to run.
+void OpenVisualizer(const char *code, const char *input, GameScreen returnTo);
+// Open it with whatever code it had last time (or the first example), returning to Sections
+void OpenVisualizerHome(void);
 
 void InitSettingsScreen(void);
 void UpdateSettingsScreen(void);

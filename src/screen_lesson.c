@@ -454,12 +454,32 @@ static void DrawQuiz(const Page *page)
 //----------------------------------------------------------------------------------
 // Screen functions
 //----------------------------------------------------------------------------------
+// Coming back from the Visualizer returns to the same page of the same topic
+static int resumeSection = -1, resumeTopic = -1, resumePage = 0;
+
 void InitLessonScreen(void)
 {
     finishScreen = UNKNOWN;
     pageIndex = 0;
     LoadCurrentLesson();
+    if (loaded && resumeSection == selectedSection && resumeTopic == selectedTopic && resumePage < lesson.pageCount) pageIndex = resumePage;
+    resumeSection = resumeTopic = -1;
     EnterPage();
+}
+
+//----------------------------------------------------------------------------------
+// "Visualize": open this page's C code in the Visualizer
+//----------------------------------------------------------------------------------
+static const Rectangle visualizeButton = { 742, 84, 158, 28 };
+
+// The first C code on the page. Not on quiz pages, and on predict pages only after answering
+static const Item *VisualizableCode(const Page *page)
+{
+    if (page->type == PAGE_QUIZ) return NULL;
+    if (page->type == PAGE_PREDICT && !predictAnswered) return NULL;
+    for (int i = 0; i < page->itemCount; i++)
+        if (page->items[i].kind == ITEM_CODE && strcmp(page->items[i].lang, "c") == 0) return &page->items[i];
+    return NULL;
 }
 
 void UpdateLessonScreen(void)
@@ -495,6 +515,17 @@ void UpdateLessonScreen(void)
         case PAGE_TRACE: UpdateTrace(page); break;
         case PAGE_PREDICT: UpdatePredict(page); break;
         case PAGE_QUIZ: UpdateQuiz(page); break;
+    }
+
+    const Item *vis = VisualizableCode(page);
+    if (vis && (UiButtonClicked(visualizeButton) || IsKeyPressed(KEY_V)))
+    {
+        resumeSection = selectedSection;
+        resumeTopic = selectedTopic;
+        resumePage = pageIndex;
+        OpenVisualizer(vis->text, NULL, LESSON);
+        finishScreen = VISUALIZER;
+        return;
     }
 
     // Page navigation last, because it changes pageIndex
@@ -537,6 +568,7 @@ void DrawLessonScreen(void)
     UiText(indicator, (Vector2){ PAGE_LEFT + CONTENT_WIDTH - indicatorSize.x, 46 }, 20, UI_MUTED);
 
     UiText(page->title, (Vector2){ PAGE_LEFT, 90 }, 20, UI_MUTED);
+    if (VisualizableCode(page)) UiButtonDrawEx(visualizeButton, "Visualize  >", UI_ACCENT2, true);
 
     switch (page->type)
     {

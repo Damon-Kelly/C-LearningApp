@@ -35,8 +35,8 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 #define RECENT_SHOWN  5
 #define PRACTICE_SHOWN 3
 
-#define CARD_BORDER   ((Color){ 200, 204, 216, 255 })
-#define BAR_BACK      ((Color){ 225, 228, 238, 255 })
+#define CARD_BORDER   UI_BORDER
+#define BAR_BACK      UI_PANEL2
 
 static float scrollY = 0.0f;
 
@@ -103,7 +103,7 @@ const char *ProgressSummaryLine(void)
 static void DrawCard(Rectangle r, Color border)
 {
     DrawRectangleRounded(r, 0.1f, 8, border);
-    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, WHITE);
+    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, UI_PANEL);
 }
 
 static int ShownSections(int *index, int max)
@@ -361,7 +361,7 @@ void DrawProgressScreen(void)
         Rectangle r = PracticeRect(i);
         bool hover = CheckCollisionPointRec(GetMousePosition(), r);
 
-        DrawRectangleRounded(r, 0.3f, 6, hover ? (Color){ 232, 240, 255, 255 } : (Color){ 240, 242, 248, 255 });
+        DrawRectangleRounded(r, 0.3f, 6, hover ? UI_BORDER : UI_PANEL2);
         const char *tag = practice[i].started ? TextFormat("best %d%%", practice[i].percent) : "new";
         Vector2 tagSize = UiMeasureText(tag, 14);
         UiText(Fit(s->topics[practice[i].topic].title, RIGHT_WIDTH - tagSize.x - 28, 16), (Vector2){ r.x + 10, r.y + 5 }, 16, UI_TEXT);

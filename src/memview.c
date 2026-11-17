@@ -8,10 +8,10 @@
 #define BOX_LEFT_OFFSET  180.0f     // room for the name/type/address label
 #define BOX_WIDTH        100.0f
 
-#define CELL_BORDER      ((Color){ 180, 185, 200, 255 })
+#define CELL_BORDER      ((Color){  72,  80,  92, 255 })
 #define CELL_CHANGED     ((Color){ 255, 159,  28, 255 })
-#define CELL_FILL        ((Color){ 250, 250, 252, 255 })
-#define CELL_PTR_FILL    ((Color){ 232, 240, 255, 255 })
+#define CELL_FILL        ((Color){  13,  17,  23, 255 })
+#define CELL_PTR_FILL    ((Color){  18,  32,  52, 255 })
 
 static int FindCell(const Step *step, const char *name)
 {
@@ -34,8 +34,8 @@ static void DrawArrowHead(Vector2 tip, Color color)
 void DrawMemory(Rectangle area, const Step *step, const Step *prev)
 {
     // Card with a thin border
-    DrawRectangleRounded(area, 0.03f, 6, CELL_BORDER);
-    DrawRectangleRounded((Rectangle){ area.x + 1, area.y + 1, area.width - 2, area.height - 2 }, 0.03f, 6, WHITE);
+    DrawRectangleRounded(area, 0.03f, 6, UI_BORDER);
+    DrawRectangleRounded((Rectangle){ area.x + 1, area.y + 1, area.width - 2, area.height - 2 }, 0.03f, 6, UI_PANEL);
     UiText("Memory", (Vector2){ area.x + 12, area.y + 8 }, 16, UI_MUTED);
 
     if (step == NULL || step->cellCount == 0)
