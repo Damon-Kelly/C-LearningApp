@@ -14,6 +14,7 @@
 #include "content.h"
 #include "codepanel.h"
 #include "exam_hooks.h"
+#include "review.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +32,13 @@
 static const Rectangle backButton = { 60, 480, 140, 40 };
 static const Rectangle nextButton = { 720, 480, 180, 40 };
 static const Rectangle startButton = { 390, 380, 180, 48 };
-static const Rectangle retryButton = { 405, 410, 150, 44 };
+static const Rectangle reviewButton = { 470, 410, 190, 44 };
+
+// With mistakes to review, "Try again" moves left to make room for "Review answers"
+static Rectangle RetryRect(void)
+{
+    return (ReviewMissedCount() > 0) ? (Rectangle){ 300, 410, 150, 44 } : (Rectangle){ 405, 410, 150, 44 };
+}
 
 //----------------------------------------------------------------------------------
 // State
@@ -55,6 +62,9 @@ static bool answered = false;
 static bool lastCorrect = false;
 static int selected = -1;                   // shown position of the clicked option
 static char typed[MAX_ANSWER_LEN] = "";
+static int pickedOption[MAX_EXAM_QUESTIONS];                // per question: option index picked (choice questions)
+static char typedAnswers[MAX_EXAM_QUESTIONS][MAX_ANSWER_LEN];   // per question: what was typed
+static bool reviewing = false;              // stepping through the missed questions
 static unsigned attemptCounter = 0;
 static unsigned rngState = 1;
 
@@ -121,6 +131,10 @@ static void StartAttempt(void)
 
     total = ExamDraw(&exam, order, MAX_EXAM_QUESTIONS, rngState);
     memset(correctAt, 0, sizeof(correctAt));
+    memset(typedAnswers, 0, sizeof(typedAnswers));
+    for (int i = 0; i < MAX_EXAM_QUESTIONS; i++) pickedOption[i] = -1;
+    reviewing = false;
+    ReviewClear();
     qIndex = 0;
     score = 0;
     phase = PHASE_QUESTION;
@@ -135,14 +149,50 @@ static void RecordAnswer(bool correct)
     if (correct) score++;
 }
 
+// Called once when the last question has been answered: sets up the review and reports the attempt
+static void FinishAttempt(void)
+{
+    QuestionResult results[MAX_EXAM_QUESTIONS];
+
+    phase = PHASE_RESULT;
+    bool passed = (score*100 >= exam.passPercent*total);
+    ReviewClear();
+
+    for (int i = 0; i < total; i++)
+    {
+        const ExamQuestion *q = &exam.pool[order[i]];
+        results[i] = (QuestionResult){ q->prompt, correctAt[i] };
+
+        ReviewItem item = { 0 };
+        item.number = i + 1;
+        item.prompt = q->prompt;
+        item.code = q->code;
+        item.lang = q->lang;
+        item.why = q->why;
+        item.wasCorrect = correctAt[i];
+
+        if (q->kind == EXAM_TYPED)
+        {
+            item.typed = true;
+            snprintf(item.typedAnswer, sizeof(item.typedAnswer), "%s", typedAnswers[i]);
+            item.modelAnswer = q->shown;
+        }
+        else
+        {
+            item.optionCount = q->optionCount;
+            for (int j = 0; j < q->optionCount; j++) item.options[j] = q->options[j];
+            item.correct = q->correct;
+            item.picked = pickedOption[i];
+        }
+        ReviewAdd(&item);
+    }
+
+    OnExamFinished(selectedSection, score, total, passed, results, total);
+}
+
 static void GoToNext(void)
 {
-    if (qIndex + 1 >= total)
-    {
-        phase = PHASE_RESULT;
-        bool passed = (score*100 >= exam.passPercent*total);
-        OnExamFinished(selectedSection, score, total, passed);
-    }
+    if (qIndex + 1 >= total) FinishAttempt();
     else
     {
         qIndex++;
@@ -176,6 +226,7 @@ static void UpdateChoice(const ExamQuestion *q)
         if (UiButtonClicked(ChoiceRect(q, i)) || IsKeyPressed(KEY_ONE + i))
         {
             selected = i;
+            pickedOption[qIndex] = optionMap[i];
             RecordAnswer(optionMap[i] == q->correct);
             break;
         }
@@ -285,6 +336,7 @@ static void UpdateTyped(const ExamQuestion *q)
     bool enter = ExamInputUpdate(typed, MAX_ANSWER_LEN);
     if ((enter || UiButtonClicked(TypedSubmitRect(q))) && typed[0] != '\0')
     {
+        snprintf(typedAnswers[qIndex], MAX_ANSWER_LEN, "%s", typed);
         RecordAnswer(ExamAnswerMatches(q, typed));
     }
 }
@@ -340,6 +392,7 @@ void InitExamScreen(void)
 {
     finishScreen = UNKNOWN;
     phase = PHASE_INTRO;
+    reviewing = false;
     LoadCurrentExam();
 }
 
@@ -349,12 +402,20 @@ void UpdateExamScreen(void)
     {
         LoadCurrentExam();
         phase = PHASE_INTRO;
+        reviewing = false;
         return;
     }
 
     if (!loaded)
     {
         if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TOPICS;
+        return;
+    }
+
+    // While reviewing mistakes, only the review reacts (Esc and its buttons)
+    if (reviewing)
+    {
+        if (ReviewUpdate()) reviewing = false;
         return;
     }
 
@@ -377,7 +438,8 @@ void UpdateExamScreen(void)
         } break;
         case PHASE_RESULT:
         {
-            if (UiButtonClicked(retryButton)) StartAttempt();
+            if (UiButtonClicked(RetryRect())) StartAttempt();
+            else if (ReviewMissedCount() > 0 && UiButtonClicked(reviewButton) && ReviewOpen()) reviewing = true;
         } break;
     }
 
@@ -399,6 +461,12 @@ void DrawExamScreen(void)
 
     UiDrawHeader(exam.title);
     float cx = GAME_WIDTH/2.0f;
+
+    if (reviewing)
+    {
+        ReviewDraw();
+        return;
+    }
 
     switch (phase)
     {
@@ -451,7 +519,8 @@ void DrawExamScreen(void)
             }
             UiDrawTextCentered("green = correct, red = missed", cx, 372, 16, UI_MUTED);
 
-            UiButtonDraw(retryButton, "Try again");
+            UiButtonDraw(RetryRect(), "Try again");
+            if (ReviewMissedCount() > 0) UiButtonDraw(reviewButton, "Review answers");
             UiButtonDrawEx(backButton, "Topics", UI_MUTED, true);
         } break;
     }
