@@ -55,3 +55,11 @@
 @exam exam_lists.txt
 
 @section Classes and operators | Classes, constructors, operator overloading and list classes
+@topic class_basics.txt | Classes and objects | Data members, member functions, public and private, setters and getters
+@topic class_ctor.txt | Constructors and destructors | Setting up an object when it is created, and cleaning up when it dies
+@topic class_this.txt | this and const | The this pointer, returning *this, const methods and const references
+@topic class_operators.txt | Operator overloading | Giving +, ++ and << a meaning for your own classes
+@topic class_list.txt | A LinkedList class | Wrapping the list in a class, with a constructor, destructor and member functions
+@topic class_copy.txt | Copy constructor and assignment | Shallow and deep copies, and copying a LinkedList safely
+@topic class_doubly.txt | Doubly linked lists | Nodes with prevPointer and nextPointer, inserting at the start, end and a position
+@exam exam_classes.txt
