@@ -30,6 +30,7 @@ typedef enum GameScreen {
     EXAM,
     PROFILE,
     SETTINGS,
+    PROGRESS,
     SCREEN_COUNT
 } GameScreen;
 
@@ -105,5 +106,14 @@ void UpdateSettingsScreen(void);
 void DrawSettingsScreen(void);
 void UnloadSettingsScreen(void);
 GameScreen FinishSettingsScreen(void);
+
+void InitProgressScreen(void);
+void UpdateProgressScreen(void);
+void DrawProgressScreen(void);
+void UnloadProgressScreen(void);
+GameScreen FinishProgressScreen(void);
+
+// One line of overall progress for the logged-in user, e.g. "3 of 12 topic quizzes completed, 1 of 3 exams passed"
+const char *ProgressSummaryLine(void);
 
 #endif // SCREENS_H

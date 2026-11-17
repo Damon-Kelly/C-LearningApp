@@ -1,7 +1,7 @@
 /**********************************************************************************************
 *
 *   Profile: read-only account details. Changes are made on the Settings screen.
-*   The Progress card is a placeholder until progress tracking exists.
+*   The Progress card summarises progress and links to the Progress screen.
 *
 **********************************************************************************************/
 
@@ -20,6 +20,7 @@ static bool haveInfo = false;
 
 static const Rectangle backButton = { 60, 480, 140, 40 };
 static const Rectangle settingsButton = { 700, 480, 200, 40 };
+static const Rectangle viewProgressButton = { 680, 384, 200, 44 };
 
 static const Rectangle detailsCard = { 60, 112, 840, 208 };
 static const Rectangle progressCard = { 60, 336, 840, 112 };
@@ -61,6 +62,7 @@ void UpdateProfileScreen(void)
     }
 
     if (UiButtonClicked(settingsButton)) finishScreen = SETTINGS;
+    if (UiButtonClicked(viewProgressButton)) finishScreen = PROGRESS;
     if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = SECTIONS;
 }
 
@@ -99,8 +101,8 @@ void DrawProfileScreen(void)
     // Progress placeholder
     DrawCard(progressCard);
     UiText("Progress", (Vector2){ progressCard.x + 20, progressCard.y + 14 }, 22, UI_TEXT);
-    UiDrawWrappedText("Your completed lessons and quiz scores will appear here soon.",
-                      (Rectangle){ progressCard.x + 20, progressCard.y + 50, progressCard.width - 40, 50 }, 18, UI_MUTED);
+    UiDrawWrappedText(ProgressSummaryLine(), (Rectangle){ progressCard.x + 20, progressCard.y + 50, 600, 50 }, 18, UI_MUTED);
+    UiButtonDraw(viewProgressButton, "View progress");
 
     UiButtonDrawEx(backButton, "Back", UI_MUTED, true);
     UiButtonDraw(settingsButton, "Edit in settings");

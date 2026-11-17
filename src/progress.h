@@ -48,6 +48,22 @@ bool ProgressRecordAttempt(AttemptKind kind, const char *section, const char *to
 // Summary for the logged-in user. False if there are no attempts yet.
 bool ProgressGetStats(AttemptKind kind, const char *section, const char *topic, AttemptStats *out);
 
+// One finished attempt, as listed on the Progress screen
+typedef struct AttemptRecord {
+    AttemptKind kind;
+    long long time;                 // Unix time
+    char section[64];
+    char topic[64];                 // lesson file name, "" for an exam
+    int score, total;
+    bool passed;
+} AttemptRecord;
+
+// Fills out with the logged-in user's most recent attempts, newest first. Returns how many (<= max).
+int ProgressRecent(AttemptRecord *out, int max);
+
+// How many attempts the logged-in user has made (the most recent 400 are counted)
+int ProgressAttemptCount(void);
+
 // Forget what was read (call when the user logs out)
 void ProgressUnload(void);
 
