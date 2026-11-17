@@ -8,7 +8,9 @@
 ********************************************************************************************/
 
 #include "raylib.h"
+#include <math.h>        // roundf, ceilf
 #include "screens.h"
+#include "codepanel.h"     // CODE_FONT_SIZE
 #include "ui.h"
 #include "content.h"
 
@@ -17,6 +19,7 @@
 //----------------------------------------------------------------------------------
 GameScreen currentScreen = TITLE;
 Font font = { 0 };
+Font fontLarge = { 0 };
 Font monoFont = { 0 };
 bool quitRequested = false;
 int selectedSection = 0;
@@ -57,6 +60,8 @@ static GameScreen transToScreen = UNKNOWN;
 static void TransitionToScreen(GameScreen screen);
 static void UpdateTransition(void);
 static void UpdateDrawFrame(void);
+static void LoadFontsForScale(float scale);
+static void UnloadFonts(void);
 static void ToggleFullscreenMode(void);
 static Rectangle CanvasDestination(void);
 
@@ -80,15 +85,9 @@ int main(void)
 
     if (startFullscreen) ToggleFullscreenMode();
 
-    // UI font, loaded large (48px) and scaled down when drawn so text stays sharp at any window size.
-    // Falls back to raylib's default font if the file is missing.
-    font = LoadFontEx(ResourcePath("Carlito-Regular.ttf"), 48, NULL, 0);
-    if (font.texture.id == 0 || font.glyphCount == 0) font = GetFontDefault();
-    SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
-
-    // Monospace font for code. Falls back to raylib's default font if the file is missing.
-    monoFont = LoadFontEx(ResourcePath("DejaVuSansMono.ttf"), 18, NULL, 0);
-    SetTextureFilter(monoFont.texture, TEXTURE_FILTER_BILINEAR);
+    // Fonts are built at the size they appear on screen (see LoadFontsForScale), so they are
+    // loaded here once for the starting window and again whenever the window scale changes.
+    LoadFontsForScale(1.0f);
 
     LoadManifest(ResourcePath("content/sections.txt"));     // errors are shown on the Sections screen
 
@@ -102,8 +101,7 @@ int main(void)
 
     screens[currentScreen].unload();
 
-    UnloadFont(font);
-    UnloadFont(monoFont);
+    UnloadFonts();
     CloseWindow();
 
     return 0;
@@ -167,6 +165,51 @@ static void ToggleFullscreenMode(void)
 #endif
 }
 
+//----------------------------------------------------------------------------------
+// Fonts
+//----------------------------------------------------------------------------------
+// Text is drawn on the 960x540 canvas and the canvas is zoomed to fill the window. A font image
+// that is smaller than the text on screen gets stretched, which is what makes text blurry. So each
+// font is rebuilt at (largest size it is drawn at on the canvas) x (window scale):
+//   font       body text, canvas sizes up to about 28 (UiText picks it for size 26 and below)
+//   fontLarge  headings, canvas sizes up to about 56 (the title is 48 x UI_FONT_SCALE)
+//   monoFont   code, always CODE_FONT_SIZE
+// The scale is rounded to steps of 0.25 so dragging the window edge does not reload every frame.
+static float loadedFontScale = 0.0f;
+static bool debugOverlay = false;          // F3: mouse and scroll bar state, for tracking down input problems
+
+static Font LoadSharpFont(const char *file, int size)
+{
+    Font f = LoadFontEx(ResourcePath(file), size, NULL, 0);
+    if (f.texture.id == 0 || f.glyphCount == 0) return GetFontDefault();
+    GenTextureMipmaps(&f.texture);                          // smooth when drawn smaller than built
+    SetTextureFilter(f.texture, TEXTURE_FILTER_TRILINEAR);
+    return f;
+}
+
+static void UnloadFonts(void)
+{
+    Font def = GetFontDefault();
+    if (font.texture.id != 0 && font.texture.id != def.texture.id) UnloadFont(font);
+    if (fontLarge.texture.id != 0 && fontLarge.texture.id != def.texture.id) UnloadFont(fontLarge);
+    if (monoFont.texture.id != 0 && monoFont.texture.id != def.texture.id) UnloadFont(monoFont);
+    font = fontLarge = monoFont = (Font){ 0 };
+}
+
+static void LoadFontsForScale(float scale)
+{
+    float q = ceilf(scale*4.0f)/4.0f;                       // round up to a step of 0.25
+    if (q < 1.0f) q = 1.0f;
+    if (q > 4.0f) q = 4.0f;
+    if (q == loadedFontScale) return;
+
+    UnloadFonts();
+    font      = LoadSharpFont("Carlito-Regular.ttf", (int)ceilf(28.0f*q));
+    fontLarge = LoadSharpFont("Carlito-Regular.ttf", (int)ceilf(56.0f*q));
+    monoFont  = LoadSharpFont("DejaVuSansMono.ttf", (int)ceilf(CODE_FONT_SIZE*q));
+    loadedFontScale = q;
+}
+
 // Where the canvas lands in the window: as large as fits, same shape, centred
 static Rectangle CanvasDestination(void)
 {
@@ -180,6 +223,7 @@ static Rectangle CanvasDestination(void)
 // Update and draw one frame
 static void UpdateDrawFrame(void)
 {
+    if (IsKeyPressed(KEY_F3)) debugOverlay = !debugOverlay;
     if (IsKeyPressed(KEY_F11) || (IsKeyPressed(KEY_ENTER) && (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)))) ToggleFullscreenMode();
 
     // Screens work in canvas coordinates, so map the mouse from window to canvas
@@ -187,7 +231,10 @@ static void UpdateDrawFrame(void)
     SetMouseOffset((int)-dest.x, (int)-dest.y);
     SetMouseScale(screenWidth/dest.width, screenHeight/dest.height);
     uiScale = dest.width/screenWidth;
-    uiOffset = (Vector2){ dest.x, dest.y };
+    uiOffset = (Vector2){ roundf(dest.x), roundf(dest.y) };   // whole pixels keep text crisp
+
+    // Rebuild the fonts when the window scale changes enough to matter
+    LoadFontsForScale(uiScale);
 
     // Update (input is ignored while a transition is running)
     if (!onTransition)
@@ -212,6 +259,17 @@ static void UpdateDrawFrame(void)
             if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, transAlpha));
 
         EndMode2D();
+
+        // F3 debug overlay, drawn in window pixels with raylib's built-in font
+        if (debugOverlay)
+        {
+            Vector2 m = GetMousePosition();
+            DrawRectangle(0, 0, 900, 70, Fade(BLACK, 0.75f));
+            DrawText(TextFormat("canvas mouse %.0f, %.0f   left button: down %d pressed %d released %d   window %dx%d  scale %.2f",
+                                m.x, m.y, IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsMouseButtonPressed(MOUSE_BUTTON_LEFT),
+                                IsMouseButtonReleased(MOUSE_BUTTON_LEFT), GetScreenWidth(), GetScreenHeight(), uiScale), 8, 8, 20, YELLOW);
+            DrawText(uiScrollDebug, 8, 38, 20, YELLOW);
+        }
 
         // Black bars on top, so nothing a screen draws outside the canvas shows
         DrawRectangle(0, 0, (int)dest.x, GetScreenHeight(), BLACK);

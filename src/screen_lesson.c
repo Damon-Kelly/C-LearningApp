@@ -19,7 +19,7 @@
 #include "codepanel.h"
 #include "memview.h"
 #include "exam_hooks.h"
-#include "review.h"
+#include "review.h"         // "Review answers" after a quiz (shared with the exam)
 
 #include <stdio.h>
 #include <string.h>
@@ -40,10 +40,16 @@ static const Rectangle tracePrevButton  = { 60, 430, 110, 38 };
 static const Rectangle traceNextButton  = { 180, 430, 140, 38 };
 static const Rectangle traceResetButton = { 330, 430, 90, 38 };
 
-// With mistakes to review there are three buttons (Retry, Review answers, Topics), otherwise two
-static Rectangle QuizRetryRect(void)  { return (ReviewMissedCount() > 0) ? (Rectangle){ 220, 300, 160, 48 } : (Rectangle){ 330, 300, 150, 48 }; }
-static Rectangle QuizReviewRect(void) { return (Rectangle){ 400, 300, 160, 48 }; }
-static Rectangle QuizTopicsRect(void) { return (ReviewMissedCount() > 0) ? (Rectangle){ 580, 300, 160, 48 } : (Rectangle){ 500, 300, 150, 48 }; }
+static const Rectangle quizRetryButton  = { 330, 300, 150, 48 };
+static const Rectangle quizTopicsButton = { 500, 300, 150, 48 };
+
+// With mistakes to review there are three buttons on the result: Retry, Review answers, Topics
+static const Rectangle quizRetryButton3  = { 215, 300, 150, 48 };
+static const Rectangle quizReviewButton3 = { 385, 300, 190, 48 };
+static const Rectangle quizTopicsButton3 = { 595, 300, 150, 48 };
+static bool QuizHasMistakes(void) { return ReviewMissedCount() > 0; }
+#define RETRY_RECT   (QuizHasMistakes() ? quizRetryButton3 : quizRetryButton)
+#define TOPICS_RECT  (QuizHasMistakes() ? quizTopicsButton3 : quizTopicsButton)
 
 //----------------------------------------------------------------------------------
 // State
@@ -55,18 +61,18 @@ static bool loaded = false;
 static char loadError[256] = "";
 static int pageIndex = 0;
 
-static float scrollY = 0.0f;        // explain
+static UiScroll explainScroll = { 0 };   // explain pages
 static int traceStep = -1;          // trace: -1 = before the first line runs
 static int predictSelected = -1;    // predict
 static bool predictAnswered = false;
 static int quizIndex = 0;           // quiz
 static int quizScore = 0;
+static bool quizCorrectAt[MAX_QUESTIONS];  // per question, reported to progress tracking at the end
+static int quizPicked[MAX_QUESTIONS];      // option picked for each question, for the review
+static bool quizReviewing = false;         // stepping through the missed questions
 static int quizSelected = -1;
 static bool quizAnswered = false;
 static bool quizDone = false;
-static bool quizCorrect[MAX_QUESTIONS];     // right or wrong, per question of this attempt
-static int quizPicked[MAX_QUESTIONS];       // option picked, per question
-static bool quizReviewing = false;          // stepping through the missed questions
 
 //----------------------------------------------------------------------------------
 // Helpers
@@ -78,25 +84,18 @@ static const TopicRef *CurrentTopic(void)
     return &section->topics[selectedTopic];
 }
 
-static void ResetQuiz(void)
+static void EnterPage(void)
 {
+    explainScroll.offset = 0.0f;
+    traceStep = -1;
+    predictSelected = -1;
+    predictAnswered = false;
     quizIndex = 0;
     quizScore = 0;
     quizSelected = -1;
     quizAnswered = false;
     quizDone = false;
     quizReviewing = false;
-    for (int i = 0; i < MAX_QUESTIONS; i++) { quizCorrect[i] = false; quizPicked[i] = -1; }
-    ReviewClear();
-}
-
-static void EnterPage(void)
-{
-    scrollY = 0.0f;
-    traceStep = -1;
-    predictSelected = -1;
-    predictAnswered = false;
-    ResetQuiz();
 }
 
 static void LoadCurrentLesson(void)
@@ -161,18 +160,19 @@ static float ExplainContentHeight(const Page *page)
     return height;
 }
 
+// The explain page's scroll bar, along the right edge of the content area
+static Rectangle ExplainTrack(void)
+{
+    return (Rectangle){ PAGE_LEFT + CONTENT_WIDTH - 6, CONTENT_TOP, 6, CONTENT_BOTTOM - CONTENT_TOP };
+}
+
 static void UpdateExplain(const Page *page)
 {
     float viewHeight = CONTENT_BOTTOM - CONTENT_TOP;
     float maxScroll = ExplainContentHeight(page) - viewHeight;
     if (maxScroll < 0) maxScroll = 0;
 
-    scrollY -= GetMouseWheelMove()*40.0f;
-    if (IsKeyDown(KEY_DOWN)) scrollY += 6.0f;
-    if (IsKeyDown(KEY_UP)) scrollY -= 6.0f;
-
-    if (scrollY < 0) scrollY = 0;
-    if (scrollY > maxScroll) scrollY = maxScroll;
+    UiScrollUpdate(&explainScroll, ExplainTrack(), viewHeight, maxScroll, 40.0f);
 }
 
 static void DrawExplain(const Page *page)
@@ -183,7 +183,7 @@ static void DrawExplain(const Page *page)
 
     UiBeginScissor(view);
 
-    float y = view.y - scrollY;
+    float y = view.y - explainScroll.offset;
     for (int i = 0; i < page->itemCount; i++)
     {
         const Item *item = &page->items[i];
@@ -212,11 +212,8 @@ static void DrawExplain(const Page *page)
     if (contentHeight > view.height)
     {
         float maxScroll = contentHeight - view.height;
-        float thumbHeight = view.height*view.height/contentHeight;
-        float thumbY = view.y + (scrollY/maxScroll)*(view.height - thumbHeight);
-        DrawRectangle((int)(view.x + view.width - 6), (int)view.y, 6, (int)view.height, (Color){ 225, 228, 238, 255 });
-        DrawRectangleRounded((Rectangle){ view.x + view.width - 6, thumbY, 6, thumbHeight }, 1.0f, 4, UI_MUTED);
-        if (scrollY < maxScroll - 1.0f) UiText("scroll for more", (Vector2){ view.x + view.width/2.0f - 50, CONTENT_BOTTOM + 4 }, 14, UI_MUTED);
+        UiScrollDraw(&explainScroll, ExplainTrack(), view.height, maxScroll);
+        if (explainScroll.offset < maxScroll - 1.0f) UiText("scroll for more", (Vector2){ view.x + view.width/2.0f - 50, CONTENT_BOTTOM + 4 }, 14, UI_MUTED);
     }
 }
 
@@ -335,41 +332,24 @@ static Rectangle QuizOptionRect(int i)
     return (Rectangle){ PAGE_LEFT, 214.0f + i*46.0f, CONTENT_WIDTH, 40 };
 }
 
-// Called once when the last question has been answered: sets up the review and reports the attempt
-static void FinishQuiz(const Page *page)
-{
-    QuestionResult results[MAX_QUESTIONS];
-
-    quizDone = true;
-    ReviewClear();
-
-    for (int i = 0; i < page->questionCount; i++)
-    {
-        const Question *q = &page->questions[i];
-        results[i] = (QuestionResult){ q->prompt, quizCorrect[i] };
-
-        ReviewItem item = { 0 };
-        item.number = i + 1;
-        item.prompt = q->prompt;
-        item.why = q->why;
-        item.wasCorrect = quizCorrect[i];
-        item.optionCount = q->optionCount;
-        for (int j = 0; j < q->optionCount; j++) item.options[j] = q->options[j];
-        item.correct = q->correct;
-        item.picked = quizPicked[i];
-        ReviewAdd(&item);
-    }
-
-    OnTopicQuizFinished(selectedSection, selectedTopic, quizScore, page->questionCount, results, page->questionCount);
-}
-
 static void UpdateQuiz(const Page *page)
 {
     if (quizDone)
     {
-        if (UiButtonClicked(QuizRetryRect())) ResetQuiz();
-        else if (ReviewMissedCount() > 0 && UiButtonClicked(QuizReviewRect()) && ReviewOpen()) quizReviewing = true;
-        else if (UiButtonClicked(QuizTopicsRect())) finishScreen = TOPICS;
+        if (QuizHasMistakes() && UiButtonClicked(quizReviewButton3) && ReviewOpen())
+        {
+            quizReviewing = true;
+            return;
+        }
+        if (UiButtonClicked(RETRY_RECT))
+        {
+            quizIndex = 0;
+            quizScore = 0;
+            quizSelected = -1;
+            quizAnswered = false;
+            quizDone = false;
+        }
+        if (UiButtonClicked(TOPICS_RECT)) finishScreen = TOPICS;
         return;
     }
 
@@ -383,8 +363,8 @@ static void UpdateQuiz(const Page *page)
             {
                 quizSelected = i;
                 quizAnswered = true;
+                quizCorrectAt[quizIndex] = (i == q->correct);
                 quizPicked[quizIndex] = i;
-                quizCorrect[quizIndex] = (i == q->correct);
                 if (i == q->correct) quizScore++;
                 break;
             }
@@ -394,7 +374,27 @@ static void UpdateQuiz(const Page *page)
     {
         if (quizIndex + 1 >= page->questionCount)
         {
-            FinishQuiz(page);
+            quizDone = true;
+            QuestionResult results[MAX_QUESTIONS];
+            for (int i = 0; i < page->questionCount; i++) results[i] = (QuestionResult){ page->questions[i].prompt, quizCorrectAt[i] };
+            OnTopicQuizFinished(selectedSection, selectedTopic, quizScore, page->questionCount, results, page->questionCount);
+
+            // Hand every question to the review, so missed ones can be looked at again
+            ReviewClear();
+            for (int i = 0; i < page->questionCount; i++)
+            {
+                const Question *qq = &page->questions[i];
+                ReviewItem item = { 0 };
+                item.number = i + 1;
+                item.prompt = qq->prompt;
+                item.why = qq->why;
+                item.wasCorrect = quizCorrectAt[i];
+                item.optionCount = qq->optionCount;
+                for (int j = 0; j < qq->optionCount; j++) item.options[j] = qq->options[j];
+                item.correct = qq->correct;
+                item.picked = quizPicked[i];
+                ReviewAdd(&item);
+            }
         }
         else
         {
@@ -418,9 +418,9 @@ static void DrawQuiz(const Page *page)
 
         UiDrawTextCentered(TextFormat("%d / %d", quizScore, page->questionCount), cx, 160, 80, UI_ACCENT);
         UiDrawTextCentered(message, cx, 255, 22, UI_TEXT);
-        UiButtonDraw(QuizRetryRect(), "Retry quiz");
-        if (ReviewMissedCount() > 0) UiButtonDraw(QuizReviewRect(), "Review answers");
-        UiButtonDrawEx(QuizTopicsRect(), "Topics", UI_MUTED, true);
+        UiButtonDraw(RETRY_RECT, "Retry quiz");
+        if (QuizHasMistakes()) UiButtonDraw(quizReviewButton3, "Review answers");
+        UiButtonDrawEx(TOPICS_RECT, "Topics", UI_MUTED, true);
         return;
     }
 
@@ -482,7 +482,7 @@ void UpdateLessonScreen(void)
 
     const Page *page = &lesson.pages[pageIndex];
 
-    // While reviewing mistakes, only the review reacts (Esc and its buttons)
+    // While reviewing quiz mistakes, only the review reacts (its buttons, arrows and Esc)
     if (quizReviewing)
     {
         if (ReviewUpdate()) quizReviewing = false;
@@ -526,17 +526,17 @@ void DrawLessonScreen(void)
 
     UiDrawHeader(lesson.title);
 
-    const char *indicator = TextFormat("Page %d of %d", pageIndex + 1, lesson.pageCount);
-    Vector2 indicatorSize = UiMeasureText(indicator, 20);
-    UiText(indicator, (Vector2){ PAGE_LEFT + CONTENT_WIDTH - indicatorSize.x, 46 }, 20, UI_MUTED);
-
-    UiText(page->title, (Vector2){ PAGE_LEFT, 90 }, 20, UI_MUTED);
-
     if (quizReviewing)
     {
         ReviewDraw();
         return;
     }
+
+    const char *indicator = TextFormat("Page %d of %d", pageIndex + 1, lesson.pageCount);
+    Vector2 indicatorSize = UiMeasureText(indicator, 20);
+    UiText(indicator, (Vector2){ PAGE_LEFT + CONTENT_WIDTH - indicatorSize.x, 46 }, 20, UI_MUTED);
+
+    UiText(page->title, (Vector2){ PAGE_LEFT, 90 }, 20, UI_MUTED);
 
     switch (page->type)
     {

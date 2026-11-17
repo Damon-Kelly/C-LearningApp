@@ -46,8 +46,9 @@ typedef struct ScreenOps {
 // Global Variables Declaration (shared by several modules, defined in raylib_game.c)
 //----------------------------------------------------------------------------------
 extern GameScreen currentScreen;
-extern Font font;               // UI font (proportional)
-extern Font monoFont;           // Code font (monospace, 18px)
+extern Font font;               // UI font (proportional), for body text
+extern Font fontLarge;          // Same typeface built bigger, for headings (UiText picks it)
+extern Font monoFont;           // Code font (monospace, drawn at CODE_FONT_SIZE)
 extern bool quitRequested;      // Set to true to close the app
 extern int selectedSection;     // Chosen on the Sections screen
 extern int selectedTopic;       // Index inside the chosen section

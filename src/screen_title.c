@@ -102,7 +102,7 @@ void UpdateTitleScreen(void)
     for (int i = 0; i < n; i++) if (UiButtonClicked(FieldRect(i))) active = i;
     if (IsKeyPressed(KEY_TAB)) active = (active + 1) % n;
 
-    UiTextBoxUpdate(fields[active], FIELD_LEN);
+    UiTextBoxUpdate(FieldRect(active), fields[active], FIELD_LEN, IsMasked(active));
 
     if (UiButtonClicked(SubmitRect()) || IsKeyPressed(KEY_ENTER)) Submit();
 
