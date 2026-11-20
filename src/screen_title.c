@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "users.h"
 #include "progress.h"
+#include "resume.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -90,8 +91,10 @@ void InitTitleScreen(void)
     // Coming back to this screen (Back from Sections) means logging out
     LogoutUser();
     ProgressUnload();
+    ResumeUnload();
     UsersSetFile(TextFormat("%susers.txt", GetApplicationDirectory()));
     ProgressSetFolder(GetApplicationDirectory());
+    ResumeSetFolder(GetApplicationDirectory());
 }
 
 void UpdateTitleScreen(void)
@@ -102,7 +105,7 @@ void UpdateTitleScreen(void)
     for (int i = 0; i < n; i++) if (UiButtonClicked(FieldRect(i))) active = i;
     if (IsKeyPressed(KEY_TAB)) active = (active + 1) % n;
 
-    UiTextBoxUpdate(fields[active], FIELD_LEN);
+    UiTextBoxUpdate(FieldRect(active), fields[active], FIELD_LEN, IsMasked(active));
 
     if (UiButtonClicked(SubmitRect()) || IsKeyPressed(KEY_ENTER)) Submit();
 
@@ -121,7 +124,10 @@ void DrawTitleScreen(void)
 {
     float cx = GAME_WIDTH/2.0f;
 
+    UiDrawCodeRain((Rectangle){ 24, 20, 250, 500 }, 14.0f);
+    UiDrawCodeRain((Rectangle){ 690, 20, 250, 500 }, 10.0f);
     UiDrawTextCentered("C Learning App", cx, 30, 48, UI_TEXT);
+    DrawRectangleGradientH((int)cx - 150, 84, 300, 2, UI_ACCENT, UI_ACCENT2);
     UiDrawTextCentered(signUpMode ? "Create your account" : "Log in to start learning C and C++", cx, 88, 20, UI_MUTED);
 
     for (int i = 0; i < FieldCount(); i++)

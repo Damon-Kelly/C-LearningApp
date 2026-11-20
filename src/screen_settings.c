@@ -13,6 +13,7 @@
 #include "ui.h"
 #include "users.h"
 #include "progress.h"
+#include "resume.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -171,7 +172,11 @@ static void Submit(void)
         {
             int userId = GetCurrentUserId();
             ok = UserDeleteAccount(fields[0], err, sizeof(err));
-            if (ok) ProgressDeleteUser(userId);         // the saved progress goes with the account
+            if (ok)                                     // the saved progress goes with the account
+            {
+                ProgressDeleteUser(userId);
+                ResumeDeleteUser(userId);
+            }
         } break;
         default: return;
     }
@@ -227,7 +232,7 @@ void UpdateSettingsScreen(void)
     for (int i = 0; i < n; i++) if (UiButtonClicked(FieldRect(i))) active = i;
     if (IsKeyPressed(KEY_TAB)) active = (active + 1) % n;
 
-    UiTextBoxUpdate(fields[active], FIELD_LEN);
+    UiTextBoxUpdate(FieldRect(active), fields[active], FIELD_LEN, IsMasked(active));
 
     if (UiButtonClicked(SubmitRect()) || IsKeyPressed(KEY_ENTER)) Submit();
 
@@ -258,7 +263,7 @@ void DrawSettingsScreen(void)
                 case MODE_PASSWORD: summary = "You need your current password to set a new one."; break;
                 default: summary = "Permanently removes your account. This cannot be undone."; break;
             }
-            UiText(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, UI_MUTED);
+            UiTextFit(summary, (Vector2){ r.x + 8, r.y + r.height + 6 }, 18, r.width - 16, UI_MUTED);
         }
 
         if (message[0] != '\0') UiText(message, (Vector2){ 60, 446 }, 18, messageGood ? UI_GOOD : UI_BAD);

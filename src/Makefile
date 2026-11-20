@@ -48,8 +48,15 @@ PROJECT_SOURCE_FILES  ?= \
     users.c \
     progress.c \
     review.c \
+    resume.c \
+    nextup.c \
     codepanel.c \
-    memview.c
+    memview.c \
+    cinterp.c \
+    editor.c \
+    screen_visualizer.c \
+    challenge.c \
+    screen_challenge.c
 
 # raylib library variables
 RAYLIB_PATH           ?= C:/raylib/raylib
