@@ -53,15 +53,28 @@ static const ScreenOps screens[SCREEN_COUNT] = {
     [CHALLENGE]  = { InitChallengeScreen,  UpdateChallengeScreen,  DrawChallengeScreen,  UnloadChallengeScreen,  FinishChallengeScreen },
 };
 
-// Fade transition state
-static float transAlpha = 0.0f;
+// Slide transition: the old screen slides out and fades, the new one slides in. Going deeper into
+// the app (Sections -> Topics -> Lesson) the new screen comes from the right, going back it comes
+// from the left. screenDepth says what "deeper" means; equal depths count as going forward.
+static const int screenDepth[SCREEN_COUNT] = {
+    [TITLE] = 0, [SECTIONS] = 1, [TOPICS] = 2, [PROFILE] = 2, [SETTINGS] = 2, [PROGRESS] = 2,
+    [LESSON] = 3, [EXAM] = 3, [CHALLENGE] = 3, [VISUALIZER] = 4,
+};
+#define TRANS_OUT_TIME  0.14f       // seconds the old screen takes to leave
+#define TRANS_IN_TIME   0.26f       // seconds the new screen takes to arrive
+#define TRANS_SLIDE     56.0f       // canvas pixels it travels
+#define TRANS_COVER     0.94f       // how far the page colour fades over the screen at the turning point
+
 static bool onTransition = false;
-static bool transFadeOut = false;
+static bool transEntering = false;      // false: the old screen is leaving, true: the new one is arriving
+static float transTime = 0.0f;          // seconds into the current phase
+static int transDir = 1;                // +1 forward, -1 back
 static GameScreen transFromScreen = UNKNOWN;
 static GameScreen transToScreen = UNKNOWN;
 
 static void TransitionToScreen(GameScreen screen);
 static void UpdateTransition(void);
+static void TransitionLook(float *slide, float *cover);
 static void UpdateDrawFrame(void);
 static void LoadFontsForScale(float scale);
 static void UnloadFonts(void);
@@ -96,6 +109,7 @@ int main(void)
 
     currentScreen = TITLE;
     screens[currentScreen].init();
+    UiMarkScreenStart();
 
     while (!WindowShouldClose() && !quitRequested)
     {
@@ -114,48 +128,64 @@ int main(void)
 //----------------------------------------------------------------------------------
 // Module Functions Definition
 //----------------------------------------------------------------------------------
-// Request a fade transition to another screen
+// Request a slide transition to another screen
 static void TransitionToScreen(GameScreen screen)
 {
     onTransition = true;
-    transFadeOut = false;
+    transEntering = false;
+    transTime = 0.0f;
     transFromScreen = currentScreen;
     transToScreen = screen;
-    transAlpha = 0.0f;
+    transDir = (screenDepth[screen] >= screenDepth[currentScreen]) ? 1 : -1;
 }
 
-// Fade to black, swap screens at full black, fade back in
+// Old screen slides out and fades; at the turning point the screens are swapped; the new one slides in
 static void UpdateTransition(void)
 {
-    const float step = 0.08f;
+    float dt = GetFrameTime();
+    if (dt > 0.05f) dt = 0.05f;             // a slow frame (a lesson loading) must not skip the animation
+    transTime += dt;
 
-    if (!transFadeOut)
+    if (!transEntering)
     {
-        transAlpha += step;
-
-        if (transAlpha >= 1.0f)
+        if (transTime >= TRANS_OUT_TIME)
         {
-            transAlpha = 1.0f;
-
             screens[transFromScreen].unload();
             screens[transToScreen].init();
             currentScreen = transToScreen;
+            UiMarkScreenStart();            // entrance animations inside the new screen start now
 
-            transFadeOut = true;
+            transEntering = true;
+            transTime = 0.0f;
         }
+    }
+    else if (transTime >= TRANS_IN_TIME)
+    {
+        onTransition = false;
+        transEntering = false;
+        transFromScreen = UNKNOWN;
+        transToScreen = UNKNOWN;
+    }
+}
+
+// How far the screen is shifted (canvas pixels) and how much the page colour covers it (0..1)
+static void TransitionLook(float *slide, float *cover)
+{
+    *slide = 0.0f;
+    *cover = 0.0f;
+    if (!onTransition) return;
+
+    if (!transEntering)
+    {
+        float e = UiEaseIn(transTime/TRANS_OUT_TIME);
+        *slide = -transDir*TRANS_SLIDE*e;
+        *cover = TRANS_COVER*e;
     }
     else
     {
-        transAlpha -= step;
-
-        if (transAlpha <= 0.0f)
-        {
-            transAlpha = 0.0f;
-            transFadeOut = false;
-            onTransition = false;
-            transFromScreen = UNKNOWN;
-            transToScreen = UNKNOWN;
-        }
+        float e = UiEaseOut(transTime/TRANS_IN_TIME);
+        *slide = transDir*TRANS_SLIDE*(1.0f - e);
+        *cover = TRANS_COVER*(1.0f - e);
     }
 }
 
@@ -254,15 +284,38 @@ static void UpdateDrawFrame(void)
 
         ClearBackground((Color){ 1, 4, 9, 255 });   // the bars around the canvas
 
+        // The page background stays still; only the screen on top slides
         BeginMode2D((Camera2D){ .offset = uiOffset, .target = { 0, 0 }, .rotation = 0.0f, .zoom = uiScale });
-
             UiDrawBackground(screenWidth, screenHeight);
-
-            screens[currentScreen].draw();
-
-            if (onTransition) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(UI_BG, transAlpha));
-
         EndMode2D();
+
+        float slide, cover;
+        TransitionLook(&slide, &cover);
+
+        Vector2 baseOffset = uiOffset;
+        uiOffset.x = baseOffset.x + roundf(slide*uiScale);      // UiBeginScissor reads uiOffset, so clipping slides along
+        BeginMode2D((Camera2D){ .offset = uiOffset, .target = { 0, 0 }, .rotation = 0.0f, .zoom = uiScale });
+            screens[currentScreen].draw();
+        EndMode2D();
+        uiOffset = baseOffset;
+
+        if (cover > 0.0f)
+        {
+            BeginMode2D((Camera2D){ .offset = uiOffset, .target = { 0, 0 }, .rotation = 0.0f, .zoom = uiScale });
+                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(UI_BG, cover));
+            EndMode2D();
+        }
+
+        // F3 debug overlay, drawn in window pixels with raylib's built-in font
+        if (debugOverlay)
+        {
+            Vector2 m = GetMousePosition();
+            DrawRectangle(0, 0, 900, 70, Fade(BLACK, 0.75f));
+            DrawText(TextFormat("canvas mouse %.0f, %.0f   left button: down %d pressed %d released %d   window %dx%d  scale %.2f",
+                                m.x, m.y, IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsMouseButtonPressed(MOUSE_BUTTON_LEFT),
+                                IsMouseButtonReleased(MOUSE_BUTTON_LEFT), GetScreenWidth(), GetScreenHeight(), uiScale), 8, 8, 20, YELLOW);
+            DrawText(uiScrollDebug, 8, 38, 20, YELLOW);
+        }
 
         // F3 debug overlay, drawn in window pixels with raylib's built-in font
         if (debugOverlay)

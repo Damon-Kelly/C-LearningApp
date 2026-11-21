@@ -48,6 +48,8 @@ PROJECT_SOURCE_FILES  ?= \
     users.c \
     progress.c \
     review.c \
+    resume.c \
+    nextup.c \
     codepanel.c \
     memview.c \
     cinterp.c \

@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "users.h"
 #include "progress.h"
+#include "resume.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -90,8 +91,10 @@ void InitTitleScreen(void)
     // Coming back to this screen (Back from Sections) means logging out
     LogoutUser();
     ProgressUnload();
+    ResumeUnload();
     UsersSetFile(TextFormat("%susers.txt", GetApplicationDirectory()));
     ProgressSetFolder(GetApplicationDirectory());
+    ResumeSetFolder(GetApplicationDirectory());
 }
 
 void UpdateTitleScreen(void)

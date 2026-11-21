@@ -20,6 +20,7 @@
 #include "memview.h"
 #include "exam_hooks.h"
 #include "review.h"         // "Review answers" after a quiz (shared with the exam)
+#include "resume.h"         // remembers the page, for "Continue where you left off"
 
 #include <stdio.h>
 #include <string.h>
@@ -457,6 +458,25 @@ static void DrawQuiz(const Page *page)
 // Coming back from the Visualizer returns to the same page of the same topic
 static int resumeSection = -1, resumeTopic = -1, resumePage = 0;
 
+// Open the lesson at a given page (call before switching to LESSON; page 0 = from the start)
+void LessonOpenAt(int section, int topic, int page)
+{
+    selectedSection = section;
+    selectedTopic = topic;
+    resumeSection = section;
+    resumeTopic = topic;
+    resumePage = page;
+}
+
+// Saves the current page, so the Sections screen can offer to continue from here
+static void NoteResume(void)
+{
+    const SectionDef *section = GetSection(selectedSection);
+    const TopicRef *topic = CurrentTopic();
+    if (!loaded || section == NULL || topic == NULL) return;
+    ResumeSetLesson(section->name, topic->file, pageIndex, lesson.pageCount);
+}
+
 void InitLessonScreen(void)
 {
     finishScreen = UNKNOWN;
@@ -465,6 +485,22 @@ void InitLessonScreen(void)
     if (loaded && resumeSection == selectedSection && resumeTopic == selectedTopic && resumePage < lesson.pageCount) pageIndex = resumePage;
     resumeSection = resumeTopic = -1;
     EnterPage();
+    NoteResume();
+}
+
+//----------------------------------------------------------------------------------
+// "Visualize": open this page's C code in the Visualizer
+//----------------------------------------------------------------------------------
+static const Rectangle visualizeButton = { 742, 84, 158, 28 };
+
+// The first C code on the page. Not on quiz pages, and on predict pages only after answering
+static const Item *VisualizableCode(const Page *page)
+{
+    if (page->type == PAGE_QUIZ) return NULL;
+    if (page->type == PAGE_PREDICT && !predictAnswered) return NULL;
+    for (int i = 0; i < page->itemCount; i++)
+        if (page->items[i].kind == ITEM_CODE && strcmp(page->items[i].lang, "c") == 0) return &page->items[i];
+    return NULL;
 }
 
 //----------------------------------------------------------------------------------
@@ -501,6 +537,7 @@ void UpdateLessonScreen(void)
     }
 
     const Page *page = &lesson.pages[pageIndex];
+    const int pageBefore = pageIndex;
 
     // While reviewing quiz mistakes, only the review reacts (its buttons, arrows and Esc)
     if (quizReviewing)
@@ -540,6 +577,8 @@ void UpdateLessonScreen(void)
         pageIndex++;
         EnterPage();
     }
+
+    if (pageIndex != pageBefore) NoteResume();
 }
 
 void DrawLessonScreen(void)

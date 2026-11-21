@@ -13,6 +13,7 @@
 #include "ui.h"
 #include "users.h"
 #include "progress.h"
+#include "resume.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -171,7 +172,11 @@ static void Submit(void)
         {
             int userId = GetCurrentUserId();
             ok = UserDeleteAccount(fields[0], err, sizeof(err));
-            if (ok) ProgressDeleteUser(userId);         // the saved progress goes with the account
+            if (ok)                                     // the saved progress goes with the account
+            {
+                ProgressDeleteUser(userId);
+                ResumeDeleteUser(userId);
+            }
         } break;
         default: return;
     }

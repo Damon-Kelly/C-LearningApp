@@ -78,6 +78,28 @@ void UiDrawCodeRain(Rectangle area, float speed);
 // True when two colours are the same
 bool UiSameColor(Color a, Color b);
 
+//----------------------------------------------------------------------------------
+// Motion helpers
+//----------------------------------------------------------------------------------
+// Colour between a (t = 0) and b (t = 1)
+Color UiMix(Color a, Color b, float t);
+
+// Easing curves for t from 0 to 1: fast then slow (out), slow then fast (in)
+float UiEaseOut(float t);
+float UiEaseIn(float t);
+
+// 0..1 that glides toward 1 while `hovered` and back to 0 when not, so hover effects ease in and out
+// instead of jumping. bounds identifies the thing (use the same rectangle every frame). Call from Draw.
+float UiHover(Rectangle bounds, bool hovered);
+
+// raylib_game.c calls this when a screen appears. UiEnter(delay, duration) then gives 0..1 (eased)
+// for "how far into its entrance animation is something that starts `delay` seconds after that".
+void UiMarkScreenStart(void);
+float UiEnter(float delay, float duration);
+
+// Fades an area in from the page background: draw it after the thing it covers. t = UiEnter(...)
+void UiFadeIn(Rectangle area, float t);
+
 // "Logged in as <name>" in small muted text just under the header line. Draws nothing when
 // nobody is logged in.
 void UiDrawLoggedInAs(void);

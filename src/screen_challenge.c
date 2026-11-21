@@ -25,6 +25,7 @@
 #include "content.h"
 #include "progress.h"
 #include "users.h"      // GetCurrentUser: drafts belong to one user
+#include "resume.h"     // remembers the challenge, for "Continue where you left off"
 
 #include <stdio.h>
 #include <string.h>
@@ -129,6 +130,13 @@ static bool SolutionUnlocked(void)
 {
     return SolvedBefore() || tries[selectedSection][selectedChallenge] >= SOLUTION_AFTER_TRIES ||
            (graded && !grade.compileError && !grade.ruleBroken && grade.passedCount == Current()->testCount);
+}
+
+// Saves this challenge as the place to continue from
+static void NoteResume(void)
+{
+    const SectionDef *s = GetSection(selectedSection);
+    if (s != NULL && Current() != NULL) ResumeSetChallenge(s->name, selectedChallenge);
 }
 
 static const char *LevelName(int level)
@@ -264,6 +272,7 @@ void InitChallengeScreen(void)
     // Coming back from the Visualizer keeps everything; a different challenge loads its draft
     if (openSection != selectedSection || openIndex != selectedChallenge) OpenChallenge(selectedChallenge);
     editor.focused = false;
+    NoteResume();
 }
 
 void UnloadChallengeScreen(void)
@@ -342,8 +351,8 @@ void UpdateChallengeScreen(void)
     float taskMax = fmaxf(0, taskContentH - (taskRect.height - 34));
     UiScrollUpdateEx(&taskScroll, (Rectangle){ taskRect.x + taskRect.width - 8, taskRect.y + 30, 4, taskRect.height - 36 }, taskRect.height - 34, taskMax, overTask ? 36.0f : 0.0f, false);
 
-    if (selectedChallenge > 0 && UiButtonClicked(prevButton)) OpenChallenge(selectedChallenge - 1);
-    if (selectedChallenge < ChallengeCount() - 1 && UiButtonClicked(nextButton)) OpenChallenge(selectedChallenge + 1);
+    if (selectedChallenge > 0 && UiButtonClicked(prevButton)) { OpenChallenge(selectedChallenge - 1); NoteResume(); }
+    if (selectedChallenge < ChallengeCount() - 1 && UiButtonClicked(nextButton)) { OpenChallenge(selectedChallenge + 1); NoteResume(); }
 
     if (editor.focused && IsKeyPressed(KEY_ESCAPE)) editor.focused = false;
     else if (UiButtonClicked(backButton) || IsKeyPressed(KEY_ESCAPE)) finishScreen = TOPICS;

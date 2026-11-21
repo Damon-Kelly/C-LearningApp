@@ -87,6 +87,9 @@ void DrawTopicsScreen(void);
 void UnloadTopicsScreen(void);
 GameScreen FinishTopicsScreen(void);
 
+// Switch to LESSON at a given page of a topic (page 0 = from the start). Sets selectedSection and selectedTopic.
+void LessonOpenAt(int section, int topic, int page);
+
 void InitLessonScreen(void);
 void UpdateLessonScreen(void);
 void DrawLessonScreen(void);

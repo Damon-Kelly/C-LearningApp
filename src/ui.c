@@ -145,19 +145,24 @@ void UiButtonDrawEx(Rectangle bounds, const char *text, Color fill, bool enabled
 {
     bool hover = enabled && CheckCollisionPointRec(GetMousePosition(), bounds);
     bool down = hover && IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    float h = UiHover(bounds, hover);               // eased 0..1: colour, glow and size glide instead of jumping
 
     // UI_MUTED means "secondary": a dark button with an outline instead of a coloured one
     bool secondary = UiSameColor(fill, UI_MUTED);
     Color color = secondary ? UI_PANEL2 : fill;
     Color textColor = secondary ? UI_TEXT : WHITE;
     if (down) color = ColorBrightness(color, -0.2f);
-    else if (hover) color = ColorBrightness(color, secondary ? 0.12f : 0.15f);
+    else color = ColorBrightness(color, h*(secondary ? 0.12f : 0.15f));
     if (!enabled) { color = Fade(color, 0.45f); textColor = Fade(textColor, 0.5f); }
 
+    // Grows a little while hovered and presses in while held
+    float grow = down ? -1.0f : h*2.0f;
+    Rectangle face = { bounds.x - grow, bounds.y - grow, bounds.width + 2*grow, bounds.height + 2*grow };
+
     // A soft glow under coloured buttons when hovered
-    if (hover && !secondary) DrawRectangleRounded((Rectangle){ bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6 }, 0.3f, 8, Fade(fill, 0.25f));
-    DrawRectangleRounded(bounds, 0.25f, 8, color);
-    if (secondary) DrawRectangleRoundedLinesEx(bounds, 0.25f, 8, 1.0f, hover ? UI_MUTED : UI_BORDER);
+    if (h > 0.01f && !secondary) DrawRectangleRounded((Rectangle){ face.x - 3, face.y - 3, face.width + 6, face.height + 6 }, 0.3f, 8, Fade(fill, 0.25f*h));
+    DrawRectangleRounded(face, 0.25f, 8, color);
+    if (secondary) DrawRectangleRoundedLinesEx(face, 0.25f, 8, 1.0f, UiMix(UI_BORDER, UI_MUTED, h));
 
     const float size = 20.0f;
     Vector2 textSize = UiMeasureText(text, size);
@@ -213,6 +218,83 @@ void UiDrawCodeRain(Rectangle area, float speed)
 }
 
 bool UiSameColor(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+
+//----------------------------------------------------------------------------------
+// Motion helpers
+//----------------------------------------------------------------------------------
+Color UiMix(Color a, Color b, float t)
+{
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return (Color){ (unsigned char)(a.r + (b.r - a.r)*t + 0.5f), (unsigned char)(a.g + (b.g - a.g)*t + 0.5f),
+                    (unsigned char)(a.b + (b.b - a.b)*t + 0.5f), (unsigned char)(a.a + (b.a - a.a)*t + 0.5f) };
+}
+
+float UiEaseOut(float t)
+{
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    float u = 1.0f - t;
+    return 1.0f - u*u*u;
+}
+
+float UiEaseIn(float t)
+{
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t*t*t;
+}
+
+// One slot per hovered thing, found again by its rectangle. A slot that has not been drawn for a
+// while is reused, so scrolling lists (whose rectangles keep moving) never run out.
+#define HOVER_SLOTS 64
+typedef struct HoverSlot { int x, y, w, h; float value; double used; } HoverSlot;
+static HoverSlot hoverSlots[HOVER_SLOTS];
+
+float UiHover(Rectangle bounds, bool hovered)
+{
+    int x = (int)(bounds.x + 0.5f), y = (int)(bounds.y + 0.5f), w = (int)(bounds.width + 0.5f), h = (int)(bounds.height + 0.5f);
+    double now = GetTime();
+
+    HoverSlot *slot = NULL, *oldest = &hoverSlots[0];
+    for (int i = 0; i < HOVER_SLOTS; i++)
+    {
+        HoverSlot *s = &hoverSlots[i];
+        if (s->used > 0.0 && s->x == x && s->y == y && s->w == w && s->h == h) { slot = s; break; }
+        if (s->used < oldest->used) oldest = s;
+    }
+    if (slot == NULL)
+    {
+        slot = oldest;
+        *slot = (HoverSlot){ x, y, w, h, 0.0f, 0.0 };
+    }
+    else if (now - slot->used > 0.5) slot->value = 0.0f;     // not drawn for a while: start from rest
+
+    float dt = GetFrameTime();
+    if (dt > 0.1f) dt = 0.1f;
+    float target = hovered ? 1.0f : 0.0f;
+    slot->value += (target - slot->value)*(1.0f - expf(-dt*16.0f));      // about 60 ms to cover most of the way
+    if (fabsf(target - slot->value) < 0.003f) slot->value = target;
+
+    slot->used = now > 0.0 ? now : 0.001;
+    return slot->value;
+}
+
+static double screenStart = 0.0;
+
+void UiMarkScreenStart(void) { screenStart = GetTime(); }
+
+float UiEnter(float delay, float duration)
+{
+    if (duration <= 0.0f) return 1.0f;
+    return UiEaseOut((float)((GetTime() - screenStart - delay)/duration));
+}
+
+void UiFadeIn(Rectangle area, float t)
+{
+    if (t >= 0.999f) return;
+    DrawRectangleRounded((Rectangle){ area.x - 4, area.y - 4, area.width + 8, area.height + 8 }, 0.12f, 8, Fade(UI_BG, 1.0f - t));
+}
 
 // A soft round glow: stacked see-through circles, brightest in the middle
 // (DrawCircleGradient changed its arguments between raylib versions, so it is not used)
