@@ -110,6 +110,7 @@ typedef struct SectionDef {
     char name[48];
     char description[128];
     char examFile[64];          // "" when the section has no exam yet
+    char challengeFile[64];     // "" when the section has no coding challenges
     TopicRef topics[MAX_TOPICS_PER_SECTION];
     int topicCount;
 } SectionDef;

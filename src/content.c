@@ -231,6 +231,12 @@ bool LoadManifest(const char *path)
             if (!hasRest || fields[0][0] == '\0') { snprintf(contentError, sizeof(contentError), "%s:%d: @exam needs a file name", file, lineNo); ok = false; break; }
             CopyString(sections[sectionCount - 1].examFile, sizeof(sections[0].examFile), fields[0]);
         }
+        else if (strcmp(keyword, "challenges") == 0)
+        {
+            if (sectionCount == 0) { snprintf(contentError, sizeof(contentError), "%s:%d: @challenges must come after a @section", file, lineNo); ok = false; break; }
+            if (!hasRest || fields[0][0] == '\0') { snprintf(contentError, sizeof(contentError), "%s:%d: @challenges needs a file name", file, lineNo); ok = false; break; }
+            CopyString(sections[sectionCount - 1].challengeFile, sizeof(sections[0].challengeFile), fields[0]);
+        }
         else
         {
             snprintf(contentError, sizeof(contentError), "%s:%d: unknown directive @%s", file, lineNo, keyword);

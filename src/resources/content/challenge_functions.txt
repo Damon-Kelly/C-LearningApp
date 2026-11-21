@@ -1,0 +1,128 @@
+# Coding challenges for "Functions". Format: see challenge.h. Checked by tools/verify_content.py.
+
+@challenge Swap through pointers
+@level 1
+@text
+Write a function swap that exchanges the values of two ints in the caller. It receives their addresses.
+
+After int x = 1, y = 2; swap(&x, &y); x must be 2 and y must be 1.
+@end
+@starter
+void swap(int *a, int *b) {
+    // your code here
+}
+@end
+@solution
+void swap(int *a, int *b) {
+    int t = *a;
+    *a = *b;
+    *b = t;
+}
+@end
+@hint Save *a in a temporary first; otherwise its value is lost when you write *a = *b.
+@test basic swap
+int x = 1, y = 2;
+swap(&x, &y);
+printf("%d %d\n", x, y);
+@expect
+2 1
+@end
+@test negative and zero
+int x = -5, y = 0;
+swap(&x, &y);
+printf("%d %d\n", x, y);
+@expect
+0 -5
+@end
+@hidden swapping twice gets the original back
+int x = 7, y = 9;
+swap(&x, &y);
+swap(&x, &y);
+printf("%d %d\n", x, y);
+@expect
+7 9
+@end
+
+@challenge Power, recursively
+@level 2
+@text
+Write a recursive function power that returns base raised to exp (exp is 0 or more). Do not use a loop: power(b, e) is b * power(b, e - 1).
+
+Every recursive function needs a base case. What is anything to the power 0?
+@end
+@starter
+int power(int base, int exp) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int power(int base, int exp) {
+    if (exp == 0) return 1;
+    return base * power(base, exp - 1);
+}
+@end
+@forbid for | This one is about recursion: write it without a loop.
+@forbid while | This one is about recursion: write it without a loop.
+@hint Base case: if exp is 0, return 1. Otherwise return base * power(base, exp - 1).
+@test small powers
+printf("%d %d\n", power(2, 3), power(5, 2));
+@expect
+8 25
+@end
+@test exponent 0
+printf("%d\n", power(7, 0));
+@expect
+1
+@end
+@test bigger
+printf("%d\n", power(2, 10));
+@expect
+1024
+@end
+@hidden negative base
+printf("%d %d\n", power(-3, 3), power(-2, 2));
+@expect
+-27 4
+@end
+
+@challenge Greatest common divisor
+@level 3
+@text
+Write a function gcd that returns the greatest common divisor of two positive ints, using Euclid's rule: gcd(a, b) is a when b is 0, and otherwise gcd(b, a % b).
+
+You may write it with recursion or with a loop.
+@end
+@starter
+int gcd(int a, int b) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int gcd(int a, int b) {
+    if (b == 0) return a;
+    return gcd(b, a % b);
+}
+@end
+@hint gcd(48, 18) = gcd(18, 12) = gcd(12, 6) = gcd(6, 0) = 6.
+@test common factor
+printf("%d\n", gcd(48, 18));
+@expect
+6
+@end
+@test no common factor
+printf("%d\n", gcd(17, 5));
+@expect
+1
+@end
+@test one divides the other
+printf("%d %d\n", gcd(10, 5), gcd(5, 10));
+@expect
+5 5
+@end
+@hidden equal numbers
+printf("%d\n", gcd(21, 21));
+@expect
+21
+@end

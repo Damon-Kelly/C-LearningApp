@@ -11,14 +11,13 @@
 #define OUTPUT_LINE_H   22
 #define OUTPUT_HEADER_H 22
 
-#define CODE_BG         ((Color){  30,  30,  36, 255 })
-#define CODE_LINE_BG    ((Color){  58,  64,  88, 255 })
-#define OUTPUT_BG       ((Color){  16,  16,  20, 255 })
+#define CODE_BG         ((Color){  22,  27,  34, 255 })
+#define CODE_LINE_BG    ((Color){  70,  60,  25, 255 })
+#define OUTPUT_BG       ((Color){   1,   4,   9, 255 })
 #define GUTTER_COLOR    ((Color){ 110, 116, 135, 255 })
 
-typedef enum CodeClass { CLS_NORMAL, CLS_KEYWORD, CLS_STRING, CLS_COMMENT, CLS_NUMBER, CLS_PREPROC } CodeClass;
 
-static const Color classColors[] = {
+static const Color classColors[CLS_COUNT] = {
     { 220, 220, 220, 255 },     // normal
     {  86, 156, 214, 255 },     // keyword
     { 206, 145, 120, 255 },     // string
@@ -45,7 +44,7 @@ static bool IsKeyword(const char *s, int len)
 }
 
 // Fills cls[0..n-1] with a colour class per character
-static void ClassifyLine(const char *s, int n, unsigned char *cls)
+void CodeClassify(const char *s, int n, unsigned char *cls)
 {
     int first = 0;
     while (first < n && s[first] == ' ') first++;
@@ -98,6 +97,8 @@ static void ClassifyLine(const char *s, int n, unsigned char *cls)
         else cls[i++] = CLS_NORMAL;
     }
 }
+
+Color CodeClassColor(int cls) { return classColors[(cls >= 0 && cls < CLS_COUNT) ? cls : 0]; }
 
 // Copies the next line of text into buf. Returns the start of the next line, or NULL after the last.
 static const char *NextLine(const char *p, char *buf, int bufSize, int *len)
@@ -170,7 +171,7 @@ void DrawCodePanel(Rectangle bounds, const char *code, const char *lang, int hig
         DrawTextEx(monoFont, num, (Vector2){ bounds.x + PANEL_PADDING + GUTTER_WIDTH - 10 - numSize.x, y }, CODE_FONT_SIZE, 0, GUTTER_COLOR);
 
         // Code, drawn in runs of the same colour (monospace, so columns line up)
-        ClassifyLine(buf, n, cls);
+        CodeClassify(buf, n, cls);
 
         int start = 0;
         while (start < n)

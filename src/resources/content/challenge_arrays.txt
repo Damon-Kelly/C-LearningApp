@@ -1,0 +1,161 @@
+# Coding challenges for "Arrays and strings". Format: see challenge.h. Checked by tools/verify_content.py.
+
+@challenge Largest element
+@level 1
+@text
+Write a function maxOf that returns the largest value in the array a, which has n elements (n is at least 1).
+
+The values may all be negative, so do not start from 0.
+@end
+@starter
+int maxOf(int a[], int n) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+int maxOf(int a[], int n) {
+    int best = a[0];
+    for (int i = 1; i < n; i++) {
+        if (a[i] > best) best = a[i];
+    }
+    return best;
+}
+@end
+@hint Start with best = a[0], then compare every other element with best.
+@test mixed values
+int a[] = {3, 9, 2, 7};
+printf("%d\n", maxOf(a, 4));
+@expect
+9
+@end
+@test largest at the end
+int a[] = {1, 2, 3};
+printf("%d\n", maxOf(a, 3));
+@expect
+3
+@end
+@test all negative
+int a[] = {-8, -3, -5};
+printf("%d\n", maxOf(a, 3));
+@expect
+-3
+@end
+@hidden one element
+int a[] = {42};
+printf("%d\n", maxOf(a, 1));
+@expect
+42
+@end
+
+@challenge Reverse an array in place
+@level 2
+@text
+Write a function reverse that reverses the n elements of a in place: the first and last swap, then the second and second-to-last, and so on.
+
+Do not use a second array. Careful with the middle, and do not read past the end.
+@end
+@starter
+void reverse(int a[], int n) {
+    // your code here
+}
+@end
+@solution
+void reverse(int a[], int n) {
+    for (int i = 0; i < n / 2; i++) {
+        int t = a[i];
+        a[i] = a[n - 1 - i];
+        a[n - 1 - i] = t;
+    }
+}
+@end
+@helpers
+void show(int a[], int n) {
+    for (int i = 0; i < n; i++) printf("%d ", a[i]);
+    printf("\n");
+}
+@end
+@hint Swap a[i] with a[n - 1 - i], for i up to n / 2 only (going further swaps everything back).
+@test odd length
+int a[] = {1, 2, 3, 4, 5};
+reverse(a, 5);
+show(a, 5);
+@expect
+5 4 3 2 1
+@end
+@test even length
+int a[] = {10, 20, 30, 40};
+reverse(a, 4);
+show(a, 4);
+@expect
+40 30 20 10
+@end
+@test one element
+int a[] = {7};
+reverse(a, 1);
+show(a, 1);
+@expect
+7
+@end
+@hidden two elements
+int a[] = {1, 2};
+reverse(a, 2);
+show(a, 2);
+@expect
+2 1
+@end
+
+@challenge Palindrome check
+@level 3
+@text
+Write a function isPalindrome that returns 1 if the string s reads the same forwards and backwards (like "level"), and 0 if not.
+
+Compare characters from both ends, moving inwards. The empty string counts as a palindrome.
+@end
+@starter
+#include <string.h>
+
+int isPalindrome(const char *s) {
+    // your code here
+    return 0;
+}
+@end
+@solution
+#include <string.h>
+
+int isPalindrome(const char *s) {
+    int i = 0;
+    int j = strlen(s) - 1;
+    while (i < j) {
+        if (s[i] != s[j]) return 0;
+        i++;
+        j--;
+    }
+    return 1;
+}
+@end
+@hint Use two indexes: i from the start and j = strlen(s) - 1 from the end, and stop when they meet.
+@test palindromes
+printf("%d\n", isPalindrome("level"));
+printf("%d\n", isPalindrome("abba"));
+@expect
+1
+1
+@end
+@test not palindromes
+printf("%d\n", isPalindrome("hello"));
+printf("%d\n", isPalindrome("ab"));
+@expect
+0
+0
+@end
+@test one character
+printf("%d\n", isPalindrome("x"));
+@expect
+1
+@end
+@hidden empty string
+printf("%d\n", isPalindrome(""));
+@expect
+1
+@end

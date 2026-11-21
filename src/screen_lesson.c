@@ -503,6 +503,21 @@ static const Item *VisualizableCode(const Page *page)
     return NULL;
 }
 
+//----------------------------------------------------------------------------------
+// "Visualize": open this page's C code in the Visualizer
+//----------------------------------------------------------------------------------
+static const Rectangle visualizeButton = { 742, 84, 158, 28 };
+
+// The first C code on the page. Not on quiz pages, and on predict pages only after answering
+static const Item *VisualizableCode(const Page *page)
+{
+    if (page->type == PAGE_QUIZ) return NULL;
+    if (page->type == PAGE_PREDICT && !predictAnswered) return NULL;
+    for (int i = 0; i < page->itemCount; i++)
+        if (page->items[i].kind == ITEM_CODE && strcmp(page->items[i].lang, "c") == 0) return &page->items[i];
+    return NULL;
+}
+
 void UpdateLessonScreen(void)
 {
     // Authors: reload the lesson file after editing it

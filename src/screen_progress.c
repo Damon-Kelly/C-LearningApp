@@ -13,10 +13,12 @@
 #include "screens.h"
 #include "ui.h"
 #include "content.h"
+#include "challenge.h"
 #include "progress.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>     // atoi
 #include <time.h>
 
 static GameScreen finishScreen = UNKNOWN;
@@ -35,8 +37,8 @@ static const Rectangle backButton = { 60, 480, 140, 40 };
 #define RECENT_SHOWN  5
 #define PRACTICE_SHOWN 3
 
-#define CARD_BORDER   ((Color){ 200, 204, 216, 255 })
-#define BAR_BACK      ((Color){ 225, 228, 238, 255 })
+#define CARD_BORDER   UI_BORDER
+#define BAR_BACK      UI_PANEL2
 
 static float scrollY = 0.0f;
 
@@ -103,7 +105,7 @@ const char *ProgressSummaryLine(void)
 static void DrawCard(Rectangle r, Color border)
 {
     DrawRectangleRounded(r, 0.1f, 8, border);
-    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, WHITE);
+    DrawRectangleRounded((Rectangle){ r.x + 2, r.y + 2, r.width - 4, r.height - 4 }, 0.1f, 8, UI_PANEL);
 }
 
 static int ShownSections(int *index, int max)
@@ -147,6 +149,15 @@ static const char *TopicTitle(const char *sectionName, const char *file)
         const SectionDef *s = GetSection(i);
         if (strcmp(s->name, sectionName) != 0) continue;
         for (int t = 0; t < s->topicCount; t++) if (strcmp(s->topics[t].file, file) == 0) return s->topics[t].title;
+
+        // A coding challenge is stored as "challenge_<section>.txt#n"
+        size_t len = strlen(s->challengeFile);
+        const ChallengeSet *set = SectionChallenges(i);
+        if (set != NULL && len > 0 && strncmp(file, s->challengeFile, len) == 0 && file[len] == '#')
+        {
+            int n = atoi(file + len + 1);
+            if (n >= 1 && n <= set->count) return TextFormat("Challenge: %s", set->items[n - 1].title);
+        }
     }
     return file;
 }
@@ -313,6 +324,21 @@ void DrawProgressScreen(void)
             default: examText = "No exam for this section"; break;
         }
         UiText(examText, (Vector2){ r.x + 14, r.y + 44 }, 14, examColor);
+
+        // Coding challenges solved, on the right of the same line
+        const ChallengeSet *set = SectionChallenges(shown[i]);
+        if (set != NULL && set->count > 0)
+        {
+            int solved = 0;
+            for (int c = 0; c < set->count; c++)
+            {
+                AttemptStats cs;
+                if (ProgressGetStats(ATTEMPT_QUIZ, s->name, ChallengeKey(s->challengeFile, c), &cs) && cs.passed) solved++;
+            }
+            const char *ct = TextFormat("Challenges %d/%d", solved, set->count);
+            Vector2 cts = UiMeasureText(ct, 14);
+            UiText(ct, (Vector2){ r.x + r.width - 14 - cts.x, r.y + 44 }, 14, solved == set->count ? UI_GOOD : UI_MUTED);
+        }
     }
     EndScissorMode();
 
@@ -361,7 +387,7 @@ void DrawProgressScreen(void)
         Rectangle r = PracticeRect(i);
         bool hover = CheckCollisionPointRec(GetMousePosition(), r);
 
-        DrawRectangleRounded(r, 0.3f, 6, hover ? (Color){ 232, 240, 255, 255 } : (Color){ 240, 242, 248, 255 });
+        DrawRectangleRounded(r, 0.3f, 6, hover ? UI_BORDER : UI_PANEL2);
         const char *tag = practice[i].started ? TextFormat("best %d%%", practice[i].percent) : "new";
         Vector2 tagSize = UiMeasureText(tag, 14);
         UiText(Fit(s->topics[practice[i].topic].title, RIGHT_WIDTH - tagSize.x - 28, 16), (Vector2){ r.x + 10, r.y + 5 }, 16, UI_TEXT);

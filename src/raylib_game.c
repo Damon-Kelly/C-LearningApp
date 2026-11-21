@@ -317,6 +317,17 @@ static void UpdateDrawFrame(void)
             DrawText(uiScrollDebug, 8, 38, 20, YELLOW);
         }
 
+        // F3 debug overlay, drawn in window pixels with raylib's built-in font
+        if (debugOverlay)
+        {
+            Vector2 m = GetMousePosition();
+            DrawRectangle(0, 0, 900, 70, Fade(BLACK, 0.75f));
+            DrawText(TextFormat("canvas mouse %.0f, %.0f   left button: down %d pressed %d released %d   window %dx%d  scale %.2f",
+                                m.x, m.y, IsMouseButtonDown(MOUSE_BUTTON_LEFT), IsMouseButtonPressed(MOUSE_BUTTON_LEFT),
+                                IsMouseButtonReleased(MOUSE_BUTTON_LEFT), GetScreenWidth(), GetScreenHeight(), uiScale), 8, 8, 20, YELLOW);
+            DrawText(uiScrollDebug, 8, 38, 20, YELLOW);
+        }
+
         // Black bars on top, so nothing a screen draws outside the canvas shows
         DrawRectangle(0, 0, (int)dest.x, GetScreenHeight(), BLACK);
         DrawRectangle((int)(dest.x + dest.width + 0.5f), 0, GetScreenWidth(), GetScreenHeight(), BLACK);
