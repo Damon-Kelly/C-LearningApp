@@ -10,7 +10,7 @@ _Copyright (c) 2014-2026 Ramon Santamaria ([@raysan5](https://github.com/raysan5
 
 ### Description
 
-An interactive desktop app for learning C and C++, written in C99 with [raylib](https://www.raylib.com). It covers seven sections (Basics, Control flow, Arrays and strings, Functions, Pointers and memory, Linked lists, Classes and operators). Each section has paged lessons, coding challenges and a section exam.
+An interactive desktop app for learning C and C++, written in C with [raylib](https://www.raylib.com). It covers seven sections (Basics, Control flow, Arrays and strings, Functions, Pointers and memory, Linked lists, Classes and operators). Each section has paged lessons, coding challenges and a section exam.
 
 The headline feature is the **Visualizer**: our own C interpreter, written in C, that runs your code one statement at a time and draws the stack, the heap and the pointers between them. Instead of crashing, it explains bugs such as NULL dereferences, use after free, out-of-bounds indexes and memory leaks in plain language.
 
